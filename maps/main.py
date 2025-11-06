@@ -4,7 +4,8 @@ main.py
 Ejemplo de uso de los mapas del módulo "maps".
 """
 import pygame
-from map_level_1 import crear_mapa_nivel_1, CONFIG_NIVEL_1
+from .map_level_1 import crear_mapa_nivel_1, CONFIG_NIVEL_1
+
 
 ANCHO = 900
 ALTO = 700

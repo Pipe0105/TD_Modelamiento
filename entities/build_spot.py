@@ -3,10 +3,15 @@ import pygame
 from game import settings
 
 class BuildSpot:
-    def __init__(self, pos):
-        self.pos = pos
-        self.size = 50
-        self.rect = pygame.Rect(pos[0]-self.size//2, pos[1]-self.size//2, self.size, self.size)
+    def __init__(self, pos, size=None):
+        self.pos = (int(pos[0]), int(pos[1]))
+        self.size = size or settings.TILE_SIZE
+        self.rect = pygame.Rect(
+            self.pos[0] - self.size // 2,
+            self.pos[1] - self.size // 2,
+            self.size,
+            self.size,
+        )
         self.occupied = False
 
     def draw(self, surface):

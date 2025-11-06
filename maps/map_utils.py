@@ -12,14 +12,14 @@ Dependencias:
 - pygame (para crear superficies y sprites)
 """
 
-import pygame
-import os
 
+import os
+import pygame
 # --------------------------------------------
 # 🎨 CONFIGURACIÓN VISUAL
 # --------------------------------------------
+RUTA_IMAGENES = os.path.join(os.path.dirname(__file__), "assets", "images")
 
-RUTA_IMAGENES = os.path.join(os.path.dirname(__file__), "..\assets\images")
 
 TILE_SIZE = 50  # Tamaño de cada celda del mapa
 
@@ -33,7 +33,8 @@ COLORES = {
 }
 
 
-def cargar_sprite(tipo, tamaño=50):
+def cargar_sprite(tipo, tamaño=TILE_SIZE):
+
     """
     Carga una imagen desde assets/images/{tipo}.png.
     Si no existe, crea un sprite sólido de color base.
@@ -46,9 +47,7 @@ def cargar_sprite(tipo, tamaño=50):
         return imagen
     except FileNotFoundError:
         print(f"⚠️ Imagen no encontrada: {ruta} — usando color base.")
-        superficie = pygame.Surface((tamaño, tamaño))
-        superficie.fill(COLORES.get(tipo, (255, 255, 255)))
-        return superficie
+        return crear_sprite_simple(tipo, tamaño)
 
 
 def extraer_camino(mapa, tipo_camino):
@@ -99,6 +98,38 @@ def extraer_camino(mapa, tipo_camino):
         camino_ordenado.append(fin_pos)
 
     return camino_ordenado
+
+def crear_sprite_simple(tipo, tamaño=TILE_SIZE):
+    """Genera una superficie sólida utilizando el color base del tipo indicado."""
+    superficie = pygame.Surface((tamaño, tamaño))
+    superficie.fill(COLORES.get(tipo, (255, 255, 255)))
+    return superficie
+
+
+def convertir_camino_a_pixeles(camino, offset=(0, 0)):
+    """Convierte una lista de coordenadas de celdas a posiciones en píxeles."""
+    ox, oy = offset
+    return [
+        (int(x * TILE_SIZE + TILE_SIZE // 2 + ox), int(y * TILE_SIZE + TILE_SIZE // 2 + oy))
+        for x, y in camino
+    ]
+
+
+def obtener_posiciones_por_tipo(mapa, tipo):
+    """Retorna las coordenadas (col, fila) donde el mapa contiene el tipo indicado."""
+    posiciones = []
+    for fila_idx, fila in enumerate(mapa):
+        for col_idx, valor in enumerate(fila):
+            if valor == tipo:
+                posiciones.append((col_idx, fila_idx))
+    return posiciones
+
+
+def dimensiones_mapa(mapa):
+    """Obtiene el ancho y alto en píxeles de una matriz de mapa."""
+    filas = len(mapa)
+    columnas = len(mapa[0]) if filas else 0
+    return columnas * TILE_SIZE, filas * TILE_SIZE
 
 
 class Tile(pygame.sprite.Sprite):

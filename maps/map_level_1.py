@@ -4,7 +4,8 @@ map_level_1.py
 Mapa del Nivel 1: "Camino de Gracia"
 """
 
-from map_utils import TILE_SIZE, cargar_sprite, Tile, extraer_camino
+from .map_utils import cargar_sprite, Tile, extraer_camino
+
 import pygame
 
 # Matriz del mapa (solo define el terreno)
@@ -24,16 +25,17 @@ MAPA_NIVEL_1 = [
 
 # Configuración del nivel
 CONFIG_NIVEL_1 = {
-    "nombre": "Valle Dividido",
+    "nombre": "Camino de Gracia",
     "mapa": MAPA_NIVEL_1,
-    "oleadas_victoria": 10,
-    "dinero_inicial": 200,
-    "vidas_inicial": 20,
+    "oleadas_victoria": 5,
+    "dinero_inicial": 150,
+    "vidas_inicial": 3,
+    "multiplicadores": {"velocidad": 1.0, "salud": 1.0, "lambda": 1.0},
 }
 
 def crear_mapa_nivel_1():
     """
-    Genera los tiles y caminos del Nivel 2.
+    Genera los tiles y caminos del Nivel 1.
     Retorna:
         - tiles (pygame.sprite.Group)
         - caminos (list[list[tuple[int, int]]])

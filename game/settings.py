@@ -2,6 +2,7 @@
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
+TILE_SIZE = 50
 
 # Escalado simple (1.5x de tamaño original)
 SCALE = 1.5
@@ -9,6 +10,7 @@ SCALE = 1.5
 # parametros de simulacion visual
 
 LAMBDA_RATE = 0.5
+MAX_LIVES = 3
 
 # Camino temporal (lista de coordenadas)
 PATH = [(int(x * SCALE), int(y * SCALE)) for (x, y) in [

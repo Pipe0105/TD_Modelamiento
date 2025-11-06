@@ -4,7 +4,8 @@ map_level_2.py
 Mapa del Nivel 2: "Valle Dividido"
 """
 
-from map_utils import TILE_SIZE, crear_sprite_simple, Tile, extraer_camino
+from .map_utils import crear_sprite_simple, Tile, extraer_camino
+
 import pygame
 
 # Matriz del mapa (solo define el terreno)
@@ -29,9 +30,10 @@ MAPA_NIVEL_2 = [
 CONFIG_NIVEL_2 = {
     "nombre": "Valle Dividido",
     "mapa": MAPA_NIVEL_2,
-    "oleadas_victoria": 10,
-    "dinero_inicial": 200,
-    "vidas_inicial": 20,
+    "oleadas_victoria": 7,
+    "dinero_inicial": 170,
+    "vidas_inicial": 3,
+    "multiplicadores": {"velocidad": 1.15, "salud": 1.2, "lambda": 1.15},
 }
 
 def crear_mapa_nivel_2():

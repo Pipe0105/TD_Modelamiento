@@ -12,7 +12,8 @@ Uso:
     from maps.map_level_3 import crear_mapa_nivel_3, CONFIG_NIVEL_3
 """
 
-from map_utils import TILE_SIZE, crear_sprite_simple, Tile, extraer_camino
+from .map_utils import crear_sprite_simple, Tile, extraer_camino
+
 import pygame
 
 # --------------------------------------------------
@@ -42,9 +43,10 @@ MAPA_NIVEL_3 = [
 CONFIG_NIVEL_3 = {
     "nombre": "Infierno Convergente",
     "mapa": MAPA_NIVEL_3,
-    "oleadas_victoria": 15,
-    "dinero_inicial": 250,
-    "vidas_inicial": 15,
+    "oleadas_victoria": 9,
+    "dinero_inicial": 190,
+    "vidas_inicial": 3,
+    "multiplicadores": {"velocidad": 1.3, "salud": 1.45, "lambda": 1.3},
 }
 
 # --------------------------------------------------
