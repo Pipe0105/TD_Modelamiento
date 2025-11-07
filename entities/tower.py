@@ -77,7 +77,8 @@ class Tower:
             cls._image_cache = None
             return None
 
-        target_size = int(settings.TILE_SIZE * 0.9)
+        target_size = int(settings.TILE_SIZE * 1.2)
+
         if target_size <= 0:
             cls._image_cache = image
             return image

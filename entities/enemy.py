@@ -204,12 +204,19 @@ class Enemy:
         if self.direction == "side" and self.facing_left:
             frame = pygame.transform.flip(frame, True, False)
 
-        center = (int(self.pos[0]), int(self.pos[1]))
+        if force or self.current_image is not frame:
+            self.current_image = frame
+            self.rect = self.current_image.get_rect()
+            self._sync_rect_position()
+
         if not self.radius:
             self.radius = self.base_radius
         self.collision_radius = max(10, self.radius // 2)
 
     def _sync_rect_position(self):
+        if not self.rect and self.current_image:
+            self.rect = self.current_image.get_rect()
+
         if self.rect:
             self.rect.center = (int(self.pos[0]), int(self.pos[1]))
 
