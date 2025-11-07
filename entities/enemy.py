@@ -11,7 +11,8 @@ class Enemy:
     """Enemigo que sigue un camino y se representa con sprites animados."""
 
     SPRITE_BASE_PATH = Path(__file__).resolve().parents[1] / "maps" / "assets" / "images" / "enemy"
-    _SPRITE_CACHE: dict[str, dict[str, list[pygame.Surface]]] = {}
+    _SPRITE_CACHE: dict[object, dict[str, list[pygame.Surface]]] = {}
+
 
     def __init__(
         self,
@@ -22,6 +23,8 @@ class Enemy:
         speed_multiplier=1.0,
         health_multiplier=1.0,
         sprite_set: str | None = None,
+        radius: int | None = None,
+        color: tuple[int, int, int] | None = None,
     ):
         self.path = path
         self.pos = list(path[0])
@@ -34,9 +37,18 @@ class Enemy:
         self.health = self.max_health
         self.reward = reward if reward is not None else settings.ENEMY_REWARD
 
+        self.base_radius = max(1, int(radius)) if radius is not None else 10
+        self.base_color = color if color is not None else settings.COLORS.get("enemy", (200, 60, 60))
+
+                # Configuración geométrica base
+        self.base_radius = max(1, int(radius)) if radius is not None else 10
+        self.base_color = color or settings.COLORS.get("enemy", (200, 60, 60))
+
         # Configuración visual / animación
         self.sprite_set = str(sprite_set) if sprite_set else "1"
-        self.sprites = self._load_sprite_set(self.sprite_set)
+        self.sprites = self._load_sprite_set(
+            self.sprite_set, placeholder_radius=self.base_radius, placeholder_color=self.base_color
+        )
         self.direction = "down"
         self.facing_left = False
         self.frame_index = 0
@@ -44,20 +56,32 @@ class Enemy:
         self.animation_speed = 6.0  # frames por segundo
         self.current_image: pygame.Surface | None = None
         self.rect: pygame.Rect | None = None
-        self.radius = 10
-        self.collision_radius = 10
+        self.radius = self.base_radius
+        self.collision_radius = max(10, self.base_radius // 2)
         self._update_image(force=True)
 
     # ------------------------------------------------------------------
     # Carga de sprites
     # ------------------------------------------------------------------
     @classmethod
-    def _load_sprite_set(cls, sprite_set: str) -> dict[str, list[pygame.Surface]]:
-        if sprite_set in cls._SPRITE_CACHE:
-            return cls._SPRITE_CACHE[sprite_set]
+    def _load_sprite_set(
+        cls,
+        sprite_set: str,
+        *,
+        placeholder_radius: int | None = None,
+        placeholder_color: tuple[int, int, int] | None = None,
+    ) -> dict[str, list[pygame.Surface]]:
+        cache_key: object
+        if placeholder_radius is None and placeholder_color is None:
+            cache_key = sprite_set
+        else:
+            cache_key = (sprite_set, placeholder_radius, placeholder_color)
+
+        if cache_key in cls._SPRITE_CACHE:
+            return cls._SPRITE_CACHE[cache_key]
 
         base_dir = cls.SPRITE_BASE_PATH / sprite_set
-        placeholder = cls._create_placeholder_surface()
+        placeholder = cls._create_placeholder_surface(placeholder_radius, placeholder_color)
         animations: dict[str, list[pygame.Surface]] = {}
 
         for direction, prefix in {"down": "D", "up": "U", "side": "S"}.items():
@@ -65,19 +89,21 @@ class Enemy:
             if not frames:
                 frames = [placeholder]
             animations[direction] = frames
-
-        cls._SPRITE_CACHE[sprite_set] = animations
+        if base_dir.exists() and cache_key != sprite_set:
+            # Si el sprite_set existe físicamente, mantener un caché compartido por nombre.
+            cls._SPRITE_CACHE[sprite_set] = animations
+        cls._SPRITE_CACHE[cache_key] = animations
         return animations
 
     @staticmethod
-    def _create_placeholder_surface() -> pygame.Surface:
-        surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE), pygame.SRCALPHA)
-        pygame.draw.circle(
-            surface,
-            settings.COLORS.get("enemy", (200, 60, 60)),
-            (settings.TILE_SIZE // 2, settings.TILE_SIZE // 2),
-            settings.TILE_SIZE // 2,
-        )
+    def _create_placeholder_surface(
+        radius: int | None = None, color: tuple[int, int, int] | None = None
+    ) -> pygame.Surface:
+        radius = max(1, radius) if radius is not None else settings.TILE_SIZE // 2
+        color = color if color is not None else settings.COLORS.get("enemy", (200, 60, 60))
+        diameter = radius * 2
+        surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        pygame.draw.circle(surface, color, (radius, radius), radius)
         return surface
 
     @classmethod
@@ -179,12 +205,8 @@ class Enemy:
             frame = pygame.transform.flip(frame, True, False)
 
         center = (int(self.pos[0]), int(self.pos[1]))
-        if self.rect and not force:
-            center = self.rect.center
-
-        self.current_image = frame
-        self.rect = self.current_image.get_rect(center=center)
-        self.radius = max(self.rect.width, self.rect.height) // 2
+        if not self.radius:
+            self.radius = self.base_radius
         self.collision_radius = max(10, self.radius // 2)
 
     def _sync_rect_position(self):
@@ -203,11 +225,14 @@ class Enemy:
             bar_y = self.rect.top - bar_height - 6
         else:
             center = (int(self.pos[0]), int(self.pos[1]))
-            pygame.draw.circle(surface, settings.COLORS["enemy"], center, self.radius)
+            pygame.draw.circle(surface, self.base_color, center, self.base_radius)
+
+
             bar_width = 36
             bar_height = 6
             bar_x = center[0] - bar_width // 2
-            bar_y = center[1] - self.radius - bar_height - 4
+            bar_y = center[1] - self.base_radius - bar_height - 4
+
 
         # Barra de vida
         pygame.draw.rect(surface, (60, 0, 0), (bar_x, bar_y, bar_width, bar_height))

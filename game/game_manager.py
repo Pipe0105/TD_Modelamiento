@@ -272,14 +272,11 @@ class GameManager:
             return
         path = random.choice(self.paths)
 
-        
-        skin_index = 0
-        if self.current_level_index is not None:
-            skin_index = min(self.current_level_index, 3)
-            sprite_set=str(skin_index + 1),
 
 
         tier = self._choose_enemy_tier()
+        sprite_set = str(tier.get("sprite_set", "1")) if tier else "1"
+
 
         velocidad_factor = tier.get("velocidad_factor", 1.0)
         salud_factor = tier.get("salud_factor", 1.0)
@@ -290,7 +287,8 @@ class GameManager:
             reward=tier.get("recompensa"),
             speed_multiplier=self.speed_multiplier * velocidad_factor,
             health_multiplier=self.health_multiplier * salud_factor,
-            radius=tier.get("radio", 10),
+            sprite_set=sprite_set,
+            radius=tier.get("radio"),
             color=tier.get("color"),
         )
         self.enemies.append(enemy)
@@ -321,6 +319,25 @@ class GameManager:
         if sum(pesos) <= 0:
             pesos = None
         return random.choices(self.enemy_tiers, weights=pesos, k=1)[0]
+
+    @staticmethod
+    def _prepare_enemy_tiers(tiers: list[dict]) -> list[dict]:
+        if not tiers:
+            return []
+
+        prepared: list[dict] = []
+        sprite_sets = ["1", "2", "3", "4"]
+
+        for idx, tier in enumerate(tiers):
+            tier_copy = dict(tier)
+            if "sprite_set" not in tier_copy or not tier_copy["sprite_set"]:
+                sprite_index = min(idx, len(sprite_sets) - 1)
+                tier_copy["sprite_set"] = sprite_sets[sprite_index]
+            else:
+                tier_copy["sprite_set"] = str(tier_copy["sprite_set"])
+            prepared.append(tier_copy)
+
+        return prepared
 
     @staticmethod
     def _format_multiplier(multiplier: float) -> str:
