@@ -640,7 +640,86 @@ class GameManager:
         if self.state in {"playing", "paused"}:
             self._draw_button(surface, self.pause_button)
 
+    def _draw_button(self, surface, button: dict, *, highlight: bool = False):
+        """Renderiza un botón genérico usado en menús y overlays."""
+
+        rect: pygame.Rect | None = button.get("rect")
+        if rect is None:
+            return
+
+        text = button.get("text", "")
+        level_index = button.get("level_index")
+
+        base_color = (70, 75, 95)
+        border_color = (150, 160, 210)
+        text_color = (245, 245, 255)
+
+        if highlight:
+            base_color = (90, 100, 140)
+            border_color = (190, 200, 250)
+
+        panel = pygame.Surface(rect.size, pygame.SRCALPHA)
+        panel.fill((*base_color, 215))
+        surface.blit(panel, rect.topleft)
+
+        pygame.draw.rect(surface, border_color, rect, width=2, border_radius=10)
+
+        if text:
+            label = self.button_font.render(text, True, text_color)
+            label_rect = label.get_rect(center=rect.center)
+            surface.blit(label, label_rect)
+
+        if level_index is not None:
+            index_text = self.small_font.render(f"Nivel {level_index + 1}", True, (210, 210, 230))
+            index_rect = index_text.get_rect(midbottom=(rect.centerx, rect.bottom - 6))
+            surface.blit(index_text, index_rect)
+
     def _draw_menu(self, surface):
         title = self.title_font.render("Tower Defense - Selección de mapas", True, (255, 255, 255))
         title_rect = title.get_rect(center=(settings.SCREEN_WIDTH // 2, 120))
         surface.blit(title, title_rect)
+
+        subtitle = self.font.render("Elige un mapa para comenzar la partida", True, (220, 220, 220))
+        subtitle_rect = subtitle.get_rect(center=(settings.SCREEN_WIDTH // 2, 190))
+        surface.blit(subtitle, subtitle_rect)
+
+        for button in self.menu_buttons:
+            highlight = button.get("level_index") == self.current_level_index
+            self._draw_button(surface, button, highlight=highlight)
+
+    def _draw_overlay(self, surface):
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((15, 15, 25, 180))
+        surface.blit(overlay, (0, 0))
+
+        titles = {
+            "paused": "Juego en pausa",
+            "game_over": "¡Derrota!",
+            "level_complete": "Nivel completado",
+            "victory": "¡Victoria!",
+        }
+
+        title_text = titles.get(self.state)
+        if title_text:
+            title_surf = self.title_font.render(title_text, True, (255, 255, 255))
+            title_rect = title_surf.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 140))
+            surface.blit(title_surf, title_rect)
+
+        if self.state == "paused":
+            info = "Puedes reanudar o gestionar el nivel desde el menú"
+        elif self.state == "game_over":
+            info = "Los enemigos alcanzaron el objetivo"
+        elif self.state == "victory":
+            info = "Has completado todos los niveles disponibles"
+        elif self.state == "level_complete":
+            info = "Elige continuar o regresar al menú"
+        else:
+            info = ""
+
+        if info:
+            info_surf = self.font.render(info, True, (230, 230, 230))
+            info_rect = info_surf.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 80))
+            surface.blit(info_surf, info_rect)
+
+        for button in self.overlay_buttons:
+            self._draw_button(surface, button, highlight=True)
