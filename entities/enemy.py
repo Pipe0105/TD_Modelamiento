@@ -40,9 +40,6 @@ class Enemy:
         self.base_radius = max(1, int(radius)) if radius is not None else 10
         self.base_color = color if color is not None else settings.COLORS.get("enemy", (200, 60, 60))
 
-                # Configuración geométrica base
-        self.base_radius = max(1, int(radius)) if radius is not None else 10
-        self.base_color = color or settings.COLORS.get("enemy", (200, 60, 60))
 
         # Configuración visual / animación
         self.sprite_set = str(sprite_set) if sprite_set else "1"
@@ -83,11 +80,25 @@ class Enemy:
         base_dir = cls.SPRITE_BASE_PATH / sprite_set
         placeholder = cls._create_placeholder_surface(placeholder_radius, placeholder_color)
         animations: dict[str, list[pygame.Surface]] = {}
+        placeholder_flags: dict[str, bool] = {}
 
         for direction, prefix in {"down": "D", "up": "U", "side": "S"}.items():
             frames = cls._load_direction_frames(base_dir, prefix)
             if not frames:
                 frames = [placeholder]
+                placeholder_flags[direction] = True
+            else:
+                placeholder_flags[direction] = False
+            animations[direction] = frames
+
+        fallback_frames = animations.get("down")
+        if fallback_frames:
+            has_real_fallback = any(frame is not placeholder for frame in fallback_frames)
+            if has_real_fallback:
+                for direction, frames in animations.items():
+                    if placeholder_flags.get(direction):
+                        animations[direction] = fallback_frames
+                
             animations[direction] = frames
         if base_dir.exists() and cache_key != sprite_set:
             # Si el sprite_set existe físicamente, mantener un caché compartido por nombre.
