@@ -229,7 +229,8 @@ class GameManager:
     def spawn_enemy(self):
         if not self.paths:
             return
-        path = random.choice(self.paths)
+        path = self.paths[0]
+
         self.enemies.append(
             Enemy(
                 path,

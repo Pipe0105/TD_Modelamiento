@@ -12,7 +12,8 @@ Uso:
     from maps.map_level_3 import crear_mapa_nivel_3, CONFIG_NIVEL_3
 """
 
-from .map_utils import crear_sprite_simple, Tile, extraer_camino
+from .map_utils import cargar_sprite, Tile, extraer_camino
+
 
 import pygame
 
@@ -25,14 +26,14 @@ MAPA_NIVEL_3 = [
     [0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-    [3, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 2, 0, 0, 0, 5, 0, 2, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 1, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 2, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0],
-    [3, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 1, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0],
 ]
@@ -63,13 +64,11 @@ def crear_mapa_nivel_3():
 
     # Sprites simples para cada tipo de celda
     sprites = {
-        0: crear_sprite_simple("suelo"),
-        1: crear_sprite_simple("camino"),
-        2: crear_sprite_simple("base_torre"),
-        3: crear_sprite_simple("inicio"),
-        4: crear_sprite_simple("fin"),
-        5: crear_sprite_simple("camino"),
-        6: crear_sprite_simple("camino"),
+        0: cargar_sprite("suelo"),
+        1: cargar_sprite("camino"),
+        2: cargar_sprite("base_torre"),
+        3: cargar_sprite("inicio"),
+        4: cargar_sprite("fin"),
     }
 
     # Grupo de tiles
@@ -81,7 +80,7 @@ def crear_mapa_nivel_3():
 
     # Generar caminos a partir de tipos definidos
     caminos = []
-    for tipo in [1, 5, 6]:
+    for tipo in [1]:
         camino = extraer_camino(MAPA_NIVEL_3, tipo)
         if camino:
             caminos.append(camino)
