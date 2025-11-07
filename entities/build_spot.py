@@ -1,57 +1,11 @@
 # entities/build_spot.py
 from __future__ import annotations
-
-from collections import deque
 from pathlib import Path
 
 import pygame
 
 from game import settings
-
-
-def _remove_background(image: pygame.Surface, tolerance: int = 70) -> pygame.Surface:
-    """Elimina un fondo plano (negro/gris) tomando el color de la esquina superior izquierda."""
-
-    cleaned = image.copy().convert_alpha()
-    width, height = cleaned.get_size()
-    if width == 0 or height == 0:
-        return cleaned
-
-    background = pygame.Color(*cleaned.get_at((0, 0)))
-    if background.a == 0:
-        return cleaned
-
-    tolerance_sq = max(0, tolerance) ** 2
-    queue = deque()
-    visited = set()
-
-    for x in range(width):
-        queue.append((x, 0))
-        queue.append((x, height - 1))
-    for y in range(height):
-        queue.append((0, y))
-        queue.append((width - 1, y))
-
-    while queue:
-        x, y = queue.popleft()
-        if (x, y) in visited:
-            continue
-        visited.add((x, y))
-
-        color = pygame.Color(*cleaned.get_at((x, y)))
-        if color.a == 0:
-            continue
-
-        dr = color.r - background.r
-        dg = color.g - background.g
-        db = color.b - background.b
-        if dr * dr + dg * dg + db * db <= tolerance_sq:
-            cleaned.set_at((x, y), (color.r, color.g, color.b, 0))
-            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-                if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in visited:
-                    queue.append((nx, ny))
-
-    return cleaned
+from utils.helpers import remove_background
 
 
 def _load_scaled_image(path: Path, size: int) -> pygame.Surface | None:
@@ -68,7 +22,8 @@ def _load_scaled_image(path: Path, size: int) -> pygame.Surface | None:
     if image.get_width() != size or image.get_height() != size:
         image = pygame.transform.smoothscale(image, (size, size))
 
-    return _remove_background(image)
+    return remove_background(image)
+
 
 
 class BuildSpot:

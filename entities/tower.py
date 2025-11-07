@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import math
 import time
-from collections import deque
 from pathlib import Path
 import random
 
@@ -13,49 +12,8 @@ from game import settings
 from entities.projectile import Projectile
 
 
-def _remove_background(image: pygame.Surface, tolerance: int = 70) -> pygame.Surface:
-    """Elimina fondos planos aprovechando el color de la esquina superior izquierda."""
+from utils.helpers import remove_background
 
-    cleaned = image.copy().convert_alpha()
-    width, height = cleaned.get_size()
-    if width == 0 or height == 0:
-        return cleaned
-
-    background = pygame.Color(*cleaned.get_at((0, 0)))
-    if background.a == 0:
-        return cleaned
-
-    tolerance_sq = max(0, tolerance) ** 2
-    queue = deque()
-    visited = set()
-
-    for x in range(width):
-        queue.append((x, 0))
-        queue.append((x, height - 1))
-    for y in range(height):
-        queue.append((0, y))
-        queue.append((width - 1, y))
-
-    while queue:
-        x, y = queue.popleft()
-        if (x, y) in visited:
-            continue
-        visited.add((x, y))
-
-        color = pygame.Color(*cleaned.get_at((x, y)))
-        if color.a == 0:
-            continue
-
-        dr = color.r - background.r
-        dg = color.g - background.g
-        db = color.b - background.b
-        if dr * dr + dg * dg + db * db <= tolerance_sq:
-            cleaned.set_at((x, y), (color.r, color.g, color.b, 0))
-            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-                if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in visited:
-                    queue.append((nx, ny))
-
-    return cleaned
 
 class Tower:
     _image_path = (
@@ -173,12 +131,12 @@ class Tower:
             cls._image_cache = None
             return None
         
-        image = _remove_background(image)
+        image = remove_background(image)
 
         target_size = int(settings.TILE_SIZE * 1.2)
 
         if target_size <= 0:
-            cleaned = _remove_background(image)
+            cleaned = remove_background(image)
             cls._image_cache = cleaned
             return cleaned
 
@@ -190,7 +148,7 @@ class Tower:
         scale = target_size / max(width, height)
         scaled_size = (max(1, int(width * scale)), max(1, int(height * scale)))
         scaled = pygame.transform.smoothscale(image, scaled_size)
-        cls._image_cache = _remove_background(scaled)
+        cls._image_cache = remove_background(scaled)
         return cls._image_cache
 
     def draw(self, surface, selected: bool = False):
