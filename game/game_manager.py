@@ -19,6 +19,10 @@ from maps.map_utils import (
 
 class GameManager:
     def __init__(self):
+        pygame.font.init()
+        self.font = pygame.font.SysFont("Arial", 24)
+        self.title_font = pygame.font.SysFont("Arial", 48, bold=True)
+        self.button_font = pygame.font.SysFont("Arial", 26)
         # Estado general
         self.levels = LEVELS
         self.state: str = "menu"
