@@ -2,6 +2,8 @@
 import random
 from typing import List, Optional
 from pathlib import Path
+import tkinter as tk
+from tkinter import messagebox
 
 import pygame
 
@@ -21,6 +23,8 @@ from maps.map_utils import (
 class GameManager:
     def __init__(self):
         pygame.font.init()
+        root = tk.Tk()
+        root.withdraw()
         self.font = pygame.font.SysFont("Arial", 24)
         self.title_font = pygame.font.SysFont("Arial", 48, bold=True)
         self.button_font = pygame.font.SysFont("Arial", 26)
@@ -423,7 +427,12 @@ class GameManager:
         
         if self.state == "playing":
             if self.metrics_panel.handle_click(pos):
+                
                 return
+            
+            respuesta = messagebox.askyesno(
+                 "Cuadro de diálogo", "¿Deseas continuar?"
+                                                            )
 
             if self.tower_menu and self._handle_tower_menu_click(pos):
                 return
@@ -440,7 +449,7 @@ class GameManager:
                 if spot.rect.collidepoint(pos) and not spot.occupied:
                     if self.money >= settings.TOWER_COST:
                         self.money -= settings.TOWER_COST
-                        self.towers.append(Tower(spot.pos))
+                        self.towers.append(Tower(spot.pos, respuesta))
                         spot.occupied = True
                         self.close_tower_menu()
                     return

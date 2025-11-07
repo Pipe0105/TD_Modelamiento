@@ -5,6 +5,7 @@ import math
 import time
 from collections import deque
 from pathlib import Path
+import random
 
 import pygame
 
@@ -66,10 +67,18 @@ class Tower:
     )
     _image_cache: pygame.Surface | None = None
 
-    def __init__(self, pos):
+    def __init__(self, pos, respuesta):
         self.pos = (int(pos[0]), int(pos[1]))
-        self.range = settings.TOWER_RANGE
-        self.fire_rate = settings.TOWER_FIRE_RATE
+
+        if(respuesta):
+            self.range = 800        ## settings.TOWER_RANGE
+            self.fire_rate =  5  
+        else:
+            self.range = 400        ## settings.TOWER_RANGE
+            self.fire_rate =  12
+
+              ## settings.TOWER_FIRE_RATE
+
         self.damage = settings.PROJECTILE_DAMAGE
         self.upgrade_levels = {key: 0 for key in settings.TOWER_UPGRADES}
         self.last_shot = 0
