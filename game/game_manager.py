@@ -1,6 +1,7 @@
 # game/game_manager.py
 import random
 from typing import List, Optional
+from pathlib import Path
 
 import pygame
 
@@ -139,7 +140,10 @@ class GameManager:
         crecimiento = self.level_config.get("crecimiento_oleada", {})
         self.wave_speed_growth = crecimiento.get("velocidad", 1.05)
         self.wave_health_growth = crecimiento.get("salud", 1.1)
-        self.enemy_tiers = self.level_config.get("enemigos", [])
+        available_sprite_sets = self._get_available_sprite_sets()
+        self.enemy_tiers = self._prepare_enemy_tiers(
+            self.level_config.get("enemigos", []), available_sprite_sets
+        )
         self.enemy_interval = random.expovariate(self.lambda_base)
         self.wave = 1
         self.target_waves = self.level_config.get("oleadas_victoria", 5)
@@ -321,20 +325,32 @@ class GameManager:
         return random.choices(self.enemy_tiers, weights=pesos, k=1)[0]
 
     @staticmethod
-    def _prepare_enemy_tiers(tiers: list[dict]) -> list[dict]:
+    def _get_available_sprite_sets() -> list[str]:
+        base_path = (
+            Path(__file__).resolve().parents[1] / "maps" / "assets" / "images" / "enemy"
+        )
+        if not base_path.exists():
+            return ["1"]
+
+        sprite_sets = [entry.name for entry in base_path.iterdir() if entry.is_dir()]
+        return sorted(sprite_sets)
+
+    @staticmethod
+    def _prepare_enemy_tiers(tiers: list[dict], sprite_sets: list[str]) -> list[dict]:
         if not tiers:
             return []
+        if not sprite_sets:
+            sprite_sets = ["1"]
 
         prepared: list[dict] = []
-        sprite_sets = ["1", "2", "3", "4"]
 
         for idx, tier in enumerate(tiers):
             tier_copy = dict(tier)
-            if "sprite_set" not in tier_copy or not tier_copy["sprite_set"]:
-                sprite_index = min(idx, len(sprite_sets) - 1)
-                tier_copy["sprite_set"] = sprite_sets[sprite_index]
-            else:
+            if "sprite_set" in tier_copy and tier_copy["sprite_set"]:
                 tier_copy["sprite_set"] = str(tier_copy["sprite_set"])
+            else:
+                sprite_index = idx % len(sprite_sets)
+                tier_copy["sprite_set"] = sprite_sets[sprite_index]
             prepared.append(tier_copy)
 
         return prepared
