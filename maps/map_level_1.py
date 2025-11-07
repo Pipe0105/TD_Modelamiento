@@ -42,6 +42,8 @@ CONFIG_NIVEL_1 = {
             "recompensa": 12,
             "color": (200, 70, 70),
             "radio": 10,
+            "sprite_set": "1",
+
         }
     ],
 }

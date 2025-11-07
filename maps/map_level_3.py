@@ -60,6 +60,7 @@ CONFIG_NIVEL_3 = {
             "recompensa": 18,
             "color": (220, 90, 90),
             "radio": 10,
+            "sprite_set": "1",
         },
         {
             "nombre": "Guardia",
@@ -70,6 +71,7 @@ CONFIG_NIVEL_3 = {
             "recompensa": 26,
             "color": (220, 140, 70),
             "radio": 13,
+            "sprite_set": "2",
         },
         {
             "nombre": "Élite",
@@ -81,6 +83,7 @@ CONFIG_NIVEL_3 = {
             "recompensa": 28,
             "color": (255, 80, 160),
             "radio": 11,
+            "sprite_set": "3",
         },
         {
             "nombre": "Coloso",
@@ -91,6 +94,7 @@ CONFIG_NIVEL_3 = {
             "recompensa": 40,
             "color": (160, 70, 70),
             "radio": 15,
+            "sprite_set": "3",
         },
     ],
 }

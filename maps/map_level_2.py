@@ -46,6 +46,7 @@ CONFIG_NIVEL_2 = {
             "recompensa": 15,
             "color": (210, 80, 80),
             "radio": 10,
+            "sprite_set": "1",
         },
         {
             "nombre": "Guardia",
@@ -56,6 +57,7 @@ CONFIG_NIVEL_2 = {
             "recompensa": 22,
             "color": (200, 120, 60),
             "radio": 12,
+            "sprite_set": "2",
         },
         {
             "nombre": "Asaltante",
@@ -66,6 +68,7 @@ CONFIG_NIVEL_2 = {
             "recompensa": 18,
             "color": (230, 60, 120),
             "radio": 10,
+            "sprite_set": "3",
         },
     ],
 }
