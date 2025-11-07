@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections import deque
 from pathlib import Path
 
 import pygame
@@ -11,28 +12,47 @@ from game import settings
 from entities.projectile import Projectile
 
 
-def _remove_background(image: pygame.Surface) -> pygame.Surface:
+def _remove_background(image: pygame.Surface, tolerance: int = 70) -> pygame.Surface:
     """Elimina fondos planos aprovechando el color de la esquina superior izquierda."""
 
-    cleaned = image.copy()
-    background = cleaned.get_at((0, 0))
-    if getattr(background, "a", 255) == 0:
+    cleaned = image.copy().convert_alpha()
+    width, height = cleaned.get_size()
+    if width == 0 or height == 0:
         return cleaned
 
-    base_color = (background.r, background.g, background.b)
-    threshold = 25
+    background = pygame.Color(*cleaned.get_at((0, 0)))
+    if background.a == 0:
+        return cleaned
 
-    width, height = cleaned.get_size()
+    tolerance_sq = max(0, tolerance) ** 2
+    queue = deque()
+    visited = set()
+
     for x in range(width):
-        for y in range(height):
-            r, g, b, a = cleaned.get_at((x, y))
-            if (
-                a > 0
-                and abs(r - base_color[0]) <= threshold
-                and abs(g - base_color[1]) <= threshold
-                and abs(b - base_color[2]) <= threshold
-            ):
-                cleaned.set_at((x, y), (r, g, b, 0))
+        queue.append((x, 0))
+        queue.append((x, height - 1))
+    for y in range(height):
+        queue.append((0, y))
+        queue.append((width - 1, y))
+
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) in visited:
+            continue
+        visited.add((x, y))
+
+        color = pygame.Color(*cleaned.get_at((x, y)))
+        if color.a == 0:
+            continue
+
+        dr = color.r - background.r
+        dg = color.g - background.g
+        db = color.b - background.b
+        if dr * dr + dg * dg + db * db <= tolerance_sq:
+            cleaned.set_at((x, y), (color.r, color.g, color.b, 0))
+            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in visited:
+                    queue.append((nx, ny))
 
     return cleaned
 
@@ -50,6 +70,8 @@ class Tower:
         self.pos = (int(pos[0]), int(pos[1]))
         self.range = settings.TOWER_RANGE
         self.fire_rate = settings.TOWER_FIRE_RATE
+        self.damage = settings.PROJECTILE_DAMAGE
+        self.upgrade_levels = {key: 0 for key in settings.TOWER_UPGRADES}
         self.last_shot = 0
         self.projectiles = []
         self.image = self._load_image()
@@ -84,9 +106,48 @@ class Tower:
 
     def shoot(self, target):
         """Crea un proyectil que sigue a su objetivo"""
-        projectile = Projectile(list(self.pos), target)
+        projectile = Projectile(list(self.pos), target, self.damage)
         self.projectiles.append(projectile)
         print(f"Torre en {self.pos} disparó a enemigo en {target.pos}")
+
+    def get_rect(self) -> pygame.Rect:
+        if self.image is not None:
+            return self.image.get_rect(center=self.pos)
+        size = 40
+        return pygame.Rect(self.pos[0] - size // 2, self.pos[1] - size // 2, size, size)
+
+    def contains_point(self, pos: tuple[int, int]) -> bool:
+        return self.get_rect().collidepoint(pos)
+
+    def get_upgrade_level(self, key: str) -> int:
+        return self.upgrade_levels.get(key, 0)
+
+    def can_upgrade(self, key: str) -> bool:
+        config = settings.TOWER_UPGRADES.get(key)
+        if not config:
+            return False
+        max_level = config.get("max_level")
+        if max_level is None:
+            return True
+        return self.get_upgrade_level(key) < max_level
+
+    def apply_upgrade(self, key: str) -> bool:
+        config = settings.TOWER_UPGRADES.get(key)
+        if not config or not self.can_upgrade(key):
+            return False
+
+        increment = config.get("increment", 0)
+        if key == "damage":
+            self.damage += increment
+        elif key == "fire_rate":
+            self.fire_rate = max(0.1, self.fire_rate + increment)
+        elif key == "range":
+            self.range = max(10, self.range + increment)
+        else:
+            return False
+
+        self.upgrade_levels[key] = self.upgrade_levels.get(key, 0) + 1
+        return True
 
     @classmethod
     def _load_image(cls) -> pygame.Surface | None:
@@ -123,7 +184,7 @@ class Tower:
         cls._image_cache = _remove_background(scaled)
         return cls._image_cache
 
-    def draw(self, surface):
+    def draw(self, surface, selected: bool = False):
         if self.image is not None:
             rect = self.image.get_rect(center=self.pos)
             surface.blit(self.image, rect)
@@ -131,7 +192,10 @@ class Tower:
             pygame.draw.circle(surface, settings.COLORS["tower"], self.pos, 20)
 
         # Dibujar rango de ataque (transparente)
-        pygame.draw.circle(surface, (80, 80, 150, 30), self.pos, self.range, 1)
+        pygame.draw.circle(surface, (80, 80, 150, 60), self.pos, self.range, 1)
+        if selected:
+            highlight_radius = max(24, self.get_rect().width // 2 + 6)
+            pygame.draw.circle(surface, (220, 220, 120), self.pos, highlight_radius, 2)
         # Dibujar proyectiles
         for p in self.projectiles:
             p.draw(surface)

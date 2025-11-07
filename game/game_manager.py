@@ -24,6 +24,8 @@ class GameManager:
         self.font = pygame.font.SysFont("Arial", 24)
         self.title_font = pygame.font.SysFont("Arial", 48, bold=True)
         self.button_font = pygame.font.SysFont("Arial", 26)
+        self.small_font = pygame.font.SysFont("Arial", 18)
+
         # Estado general
         self.levels = LEVELS
         self.state: str = "menu"
@@ -58,6 +60,8 @@ class GameManager:
 
         self.menu_buttons = self._build_menu_buttons()
         self.overlay_buttons: List[dict] = []
+        self.tower_menu: dict | None = None
+
         self.pause_button = self._make_button(
             "Menú",
             (settings.SCREEN_WIDTH - 110, 45),
@@ -155,6 +159,8 @@ class GameManager:
         self.lives = self.level_config.get("vidas_inicial", settings.MAX_LIVES)
         self.metrics_panel.visible = False
         self.overlay_buttons = []
+        self.tower_menu = None
+
         self._wave_was_active = True
         self.pause_button["text"] = "Menú"
         self.state = "playing"
@@ -213,6 +219,8 @@ class GameManager:
         self.lives = settings.MAX_LIVES
         self.metrics_panel.visible = False
         self.overlay_buttons = []
+        self.tower_menu = None
+
         self._wave_was_active = True
         self.pause_button["text"] = "Menú"
 
@@ -416,20 +424,166 @@ class GameManager:
         if self.state == "playing":
             if self.metrics_panel.handle_click(pos):
                 return
-            
+
+            if self.tower_menu and self._handle_tower_menu_click(pos):
+                return
+
+            tower = self._get_tower_at(pos)
+            if tower:
+                if self.tower_menu and self.tower_menu.get("tower") is tower:
+                    self.close_tower_menu()
+                else:
+                    self.open_tower_menu(tower)
+                return
+
             for spot in self.spots:
                 if spot.rect.collidepoint(pos) and not spot.occupied:
                     if self.money >= settings.TOWER_COST:
                         self.money -= settings.TOWER_COST
                         self.towers.append(Tower(spot.pos))
                         spot.occupied = True
+                        self.close_tower_menu()
                     return
+
+            if self.tower_menu:
+                self.close_tower_menu()
         elif self.state in {"game_over", "level_complete", "victory", "paused"}:
             for button in self.overlay_buttons:
                 if button["rect"].collidepoint(pos):
                     button["action"]()
                     break
 
+    def _get_tower_at(self, pos):
+        for tower in reversed(self.towers):
+            if tower.contains_point(pos):
+                return tower
+        return None
+
+    def open_tower_menu(self, tower: Tower):
+        total_buttons = len(settings.TOWER_UPGRADES)
+        if total_buttons == 0:
+            self.tower_menu = None
+            return
+
+        button_width = 190
+        button_height = 44
+        spacing = 8
+        total_height = total_buttons * button_height + (total_buttons - 1) * spacing
+
+        tower_rect = tower.get_rect()
+        offset = tower_rect.width // 2 + 16
+        x = tower.pos[0] + offset
+        if x + button_width + 10 > settings.SCREEN_WIDTH:
+            x = tower.pos[0] - offset - button_width
+        x = max(10, min(settings.SCREEN_WIDTH - button_width - 10, x))
+
+        y = tower.pos[1] - total_height // 2
+        y = max(10, min(settings.SCREEN_HEIGHT - total_height - 10, y))
+
+        buttons = []
+        current_y = y
+        for key in settings.TOWER_UPGRADES:
+            rect = pygame.Rect(x, current_y, button_width, button_height)
+            buttons.append({"rect": rect, "key": key})
+            current_y += button_height + spacing
+
+        self.tower_menu = {"tower": tower, "buttons": buttons}
+
+    def close_tower_menu(self):
+        self.tower_menu = None
+
+    def _handle_tower_menu_click(self, pos) -> bool:
+        if not self.tower_menu:
+            return False
+
+        for button in self.tower_menu.get("buttons", []):
+            if button["rect"].collidepoint(pos):
+                self._attempt_tower_upgrade(button["key"])
+                return True
+        return False
+
+    def _attempt_tower_upgrade(self, key: str):
+        if not self.tower_menu:
+            return
+
+        tower: Tower | None = self.tower_menu.get("tower")
+        if tower is None:
+            return
+
+        config = settings.TOWER_UPGRADES.get(key)
+        if not config:
+            return
+
+        if not tower.can_upgrade(key):
+            return
+
+        cost = config.get("cost", 0)
+        if self.money < cost:
+            return
+
+        if tower.apply_upgrade(key):
+            self.money -= cost
+            self.open_tower_menu(tower)
+
+    def _draw_tower_menu(self, surface):
+        if not self.tower_menu:
+            return
+
+        tower: Tower | None = self.tower_menu.get("tower")
+        if tower is None:
+            return
+
+        for button in self.tower_menu.get("buttons", []):
+            key = button.get("key")
+            rect = button.get("rect")
+            if rect is None or key is None:
+                continue
+
+            config = settings.TOWER_UPGRADES.get(key, {})
+            max_level = config.get("max_level")
+            level = tower.get_upgrade_level(key)
+            can_upgrade = tower.can_upgrade(key)
+            affordable = self.money >= config.get("cost", 0)
+            enabled = can_upgrade and affordable
+
+            panel = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            base_alpha = 220 if enabled else 140
+            panel.fill((30, 35, 45, base_alpha))
+            surface.blit(panel, rect.topleft)
+
+            border_color = (130, 200, 100) if enabled else (120, 120, 120)
+            pygame.draw.rect(surface, border_color, rect, width=2, border_radius=6)
+
+            label = config.get("label", key.title())
+            increment = config.get("increment")
+            if isinstance(increment, float):
+                inc_text = f"+{increment:.1f}" if increment else ""
+            else:
+                inc_text = f"+{increment}" if increment else ""
+
+            title_text = label if not inc_text else f"{label} {inc_text}"
+            title_color = (240, 240, 240) if enabled else (180, 180, 180)
+            title_surf = self.button_font.render(title_text, True, title_color)
+            title_rect = title_surf.get_rect(midtop=(rect.centerx, rect.top + 6))
+            surface.blit(title_surf, title_rect)
+
+            if not can_upgrade:
+                status_text = "Máx."
+            else:
+                cost = config.get("cost", 0)
+                status_text = f"$ {cost}"
+                if not affordable:
+                    status_text += " (no hay $)"
+
+            if max_level:
+                status_text += f" | Lv {level}/{max_level}"
+            else:
+                status_text += f" | Lv {level}"
+
+            status_color = (210, 210, 210) if enabled else (170, 150, 150)
+            status_surf = self.small_font.render(status_text, True, status_color)
+            status_rect = status_surf.get_rect(midbottom=(rect.centerx, rect.bottom - 6))
+            surface.blit(status_surf, status_rect)
     # ------------------------------------------------------------------
     # Renderizado
     # ------------------------------------------------------------------
@@ -447,10 +601,14 @@ class GameManager:
         for spot in self.spots:
             spot.draw(surface)
         for tower in self.towers:
-            tower.draw(surface)
+            selected = self.tower_menu and self.tower_menu.get("tower") is tower
+            tower.draw(surface, selected=bool(selected))
         for enemy in self.enemies:
             enemy.draw(surface)
         self._draw_hud(surface)
+
+        if self.tower_menu:
+            self._draw_tower_menu(surface)
 
         if self.state in {"game_over", "level_complete", "victory", "paused"}:
 
@@ -477,73 +635,3 @@ class GameManager:
         title = self.title_font.render("Tower Defense - Selección de mapas", True, (255, 255, 255))
         title_rect = title.get_rect(center=(settings.SCREEN_WIDTH // 2, 120))
         surface.blit(title, title_rect)
-
-        subtitle = self.font.render(
-            "Elige un nivel: cada mapa aumenta la dificultad y modifica la ruta.",
-            True,
-            (200, 200, 200),
-        )
-        subtitle_rect = subtitle.get_rect(center=(settings.SCREEN_WIDTH // 2, 170))
-        surface.blit(subtitle, subtitle_rect)
-
-        for button in self.menu_buttons:
-            self._draw_button(surface, button)
-            idx = button.get("level_index")
-            if idx is None:
-                continue
-            config = self.levels[idx]["config"]
-            multipliers = config.get("multiplicadores", {})
-            salud_pct = self._format_multiplier(multipliers.get("salud", 1.0))
-            vel_pct = self._format_multiplier(multipliers.get("velocidad", 1.0))
-            lambda_pct = self._format_multiplier(multipliers.get("lambda", 1.0))
-            info = self.font.render(
-                " | ".join(
-                    [
-                        f"Oleadas: {config.get('oleadas_victoria', 0)}",
-                        f"Salud {salud_pct}",
-                        f"Velocidad {vel_pct}",
-                        f"Aparición {lambda_pct}",
-                    ]
-                ),                True,
-                (180, 180, 180),
-            )
-            info_rect = info.get_rect(center=(button["rect"].centerx, button["rect"].bottom + 18))
-            surface.blit(info, info_rect)
-
-    def _draw_overlay(self, surface):
-        overlay = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        if self.state == "game_over":
-            title_text = "¡Derrota!"
-            message = "3 enemigos alcanzaron la meta."
-        elif self.state == "level_complete":
-            title_text = "Nivel completado"
-            message = "Prepárate para un desafío mayor."
-        elif self.state == "victory":
-            title_text = "¡Victoria total!"
-            message = "Has superado todos los mapas disponibles."
-        else:
-            title_text = "Menú de pausa"
-            message = "Selecciona una opción para continuar."
-
-        title = self.title_font.render(title_text, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 80))
-        surface.blit(title, title_rect)
-
-        message_text = self.font.render(message, True, (220, 220, 220))
-        message_rect = message_text.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 30))
-        surface.blit(message_text, message_rect)
-
-        for button in self.overlay_buttons:
-            self._draw_button(surface, button)
-
-    def _draw_button(self, surface, button):
-        rect = button["rect"]
-        pygame.draw.rect(surface, (70, 120, 200), rect, border_radius=10)
-        pygame.draw.rect(surface, (30, 40, 70), rect, 2, border_radius=10)
-        label = self.button_font.render(button["text"], True, (255, 255, 255))
-        label_rect = label.get_rect(center=rect.center)
-        surface.blit(label, label_rect)
-

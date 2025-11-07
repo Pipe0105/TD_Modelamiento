@@ -3,11 +3,11 @@ import pygame, math
 from game import settings
 
 class Projectile:
-    def __init__(self, pos, target):
+    def __init__(self, pos, target, damage):
         self.pos = list(pos)
         self.target = target
         self.speed = settings.PROJECTILE_SPEED
-        self.damage = settings.PROJECTILE_DAMAGE
+        self.damage = damage
         self.alive = True
 
     def update(self):

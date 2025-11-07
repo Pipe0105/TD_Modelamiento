@@ -38,6 +38,27 @@ TOWER_FIRE_RATE = 1.5   # antes 1.0
 PROJECTILE_SPEED = 6
 PROJECTILE_DAMAGE = 50
 
+# Mejoras de torres (etiqueta, costo, incremento, nivel máximo opcional)
+TOWER_UPGRADES = {
+    "damage": {
+        "label": "Daño",
+        "cost": 70,
+        "increment": 20,
+        "max_level": 3,
+    },
+    "fire_rate": {
+        "label": "Vel. disparo",
+        "cost": 85,
+        "increment": 0.5,
+        "max_level": 3,
+    },
+    "range": {
+        "label": "Rango",
+        "cost": 60,
+        "increment": 35,
+        "max_level": 3,
+    },
+}
 
 # colores (tema)
 

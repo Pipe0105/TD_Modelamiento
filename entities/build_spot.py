@@ -1,6 +1,7 @@
 # entities/build_spot.py
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
 
 import pygame
@@ -8,28 +9,47 @@ import pygame
 from game import settings
 
 
-def _remove_background(image: pygame.Surface) -> pygame.Surface:
+def _remove_background(image: pygame.Surface, tolerance: int = 70) -> pygame.Surface:
     """Elimina un fondo plano (negro/gris) tomando el color de la esquina superior izquierda."""
 
-    cleaned = image.copy()
-    background = cleaned.get_at((0, 0))
-    if getattr(background, "a", 255) == 0:
+    cleaned = image.copy().convert_alpha()
+    width, height = cleaned.get_size()
+    if width == 0 or height == 0:
         return cleaned
 
-    base_color = (background.r, background.g, background.b)
-    threshold = 25
+    background = pygame.Color(*cleaned.get_at((0, 0)))
+    if background.a == 0:
+        return cleaned
 
-    width, height = cleaned.get_size()
+    tolerance_sq = max(0, tolerance) ** 2
+    queue = deque()
+    visited = set()
+
     for x in range(width):
-        for y in range(height):
-            r, g, b, a = cleaned.get_at((x, y))
-            if (
-                a > 0
-                and abs(r - base_color[0]) <= threshold
-                and abs(g - base_color[1]) <= threshold
-                and abs(b - base_color[2]) <= threshold
-            ):
-                cleaned.set_at((x, y), (r, g, b, 0))
+        queue.append((x, 0))
+        queue.append((x, height - 1))
+    for y in range(height):
+        queue.append((0, y))
+        queue.append((width - 1, y))
+
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) in visited:
+            continue
+        visited.add((x, y))
+
+        color = pygame.Color(*cleaned.get_at((x, y)))
+        if color.a == 0:
+            continue
+
+        dr = color.r - background.r
+        dg = color.g - background.g
+        db = color.b - background.b
+        if dr * dr + dg * dg + db * db <= tolerance_sq:
+            cleaned.set_at((x, y), (color.r, color.g, color.b, 0))
+            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in visited:
+                    queue.append((nx, ny))
 
     return cleaned
 
