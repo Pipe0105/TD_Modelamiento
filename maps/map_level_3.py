@@ -12,7 +12,9 @@ Uso:
     from maps.map_level_3 import crear_mapa_nivel_3, CONFIG_NIVEL_3
 """
 
-from .map_utils import cargar_sprite, Tile, extraer_camino
+from .map_utils import cargar_sprite, Tile, extraer_caminos
+
+
 
 
 import pygame
@@ -26,12 +28,12 @@ MAPA_NIVEL_3 = [
     [0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    [3, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 2, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+    [3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
@@ -48,6 +50,49 @@ CONFIG_NIVEL_3 = {
     "dinero_inicial": 190,
     "vidas_inicial": 3,
     "multiplicadores": {"velocidad": 1.3, "salud": 1.45, "lambda": 1.3},
+        "crecimiento_oleada": {"velocidad": 1.08, "salud": 1.2},
+    "enemigos": [
+        {
+            "nombre": "Explorador",
+            "peso": 0.45,
+            "velocidad": (1.4, 2.6),
+            "salud": (110, 180),
+            "recompensa": 18,
+            "color": (220, 90, 90),
+            "radio": 10,
+        },
+        {
+            "nombre": "Guardia",
+            "peso": 0.25,
+            "velocidad": (1.2, 2.0),
+            "salud": (180, 260),
+            "salud_factor": 1.35,
+            "recompensa": 26,
+            "color": (220, 140, 70),
+            "radio": 13,
+        },
+        {
+            "nombre": "Élite",
+            "peso": 0.2,
+            "velocidad": (1.9, 3.1),
+            "velocidad_factor": 1.2,
+            "salud": (160, 220),
+            "salud_factor": 1.1,
+            "recompensa": 28,
+            "color": (255, 80, 160),
+            "radio": 11,
+        },
+        {
+            "nombre": "Coloso",
+            "peso": 0.1,
+            "velocidad": (0.9, 1.4),
+            "salud": (260, 360),
+            "salud_factor": 1.6,
+            "recompensa": 40,
+            "color": (160, 70, 70),
+            "radio": 15,
+        },
+    ],
 }
 
 # --------------------------------------------------
@@ -79,10 +124,6 @@ def crear_mapa_nivel_3():
             tiles.add(tile)
 
     # Generar caminos a partir de tipos definidos
-    caminos = []
-    for tipo in [1]:
-        camino = extraer_camino(MAPA_NIVEL_3, tipo)
-        if camino:
-            caminos.append(camino)
+    caminos = extraer_caminos(MAPA_NIVEL_3, (1,))
 
     return tiles, caminos

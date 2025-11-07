@@ -15,6 +15,8 @@ Dependencias:
 
 import os
 import pygame
+from collections import deque
+from math import gcd
 # --------------------------------------------
 # 🎨 CONFIGURACIÓN VISUAL
 # --------------------------------------------
@@ -32,6 +34,33 @@ COLORES = {
     "fin": (255, 100, 100),
 }
 
+def _extraer_primer_cuadro(superficie: pygame.Surface) -> pygame.Surface:
+    """
+    Cuando la imagen original es una hoja de sprites con múltiples cuadros,
+    recorta y devuelve únicamente el primer frame. Si no parece haber más de
+    un cuadro, devuelve la superficie original.
+    """
+
+    ancho, alto = superficie.get_size()
+    if not ancho or not alto:
+        return superficie
+
+    # Hojas típicas suelen organizarse en cuadros cuadrados. Utilizamos el MCD
+    # para detectar subdivisiones posibles y validar que haya más de un cuadro.
+    cuadro = gcd(ancho, alto)
+    if cuadro <= 0:
+        return superficie
+
+    cuadros_horizontales = ancho // cuadro
+    cuadros_verticales = alto // cuadro
+
+    if cuadros_horizontales * cuadros_verticales <= 1:
+        return superficie
+
+    rect = pygame.Rect(0, 0, cuadro, cuadro)
+    return superficie.subsurface(rect).copy()
+
+
 
 def cargar_sprite(tipo, tamaño=TILE_SIZE):
 
@@ -43,6 +72,8 @@ def cargar_sprite(tipo, tamaño=TILE_SIZE):
 
     try:
         imagen = pygame.image.load(ruta).convert_alpha()
+        imagen = _extraer_primer_cuadro(imagen)
+
         imagen = pygame.transform.scale(imagen, (tamaño, tamaño))
         return imagen
     except FileNotFoundError:
@@ -50,54 +81,97 @@ def cargar_sprite(tipo, tamaño=TILE_SIZE):
         return crear_sprite_simple(tipo, tamaño)
 
 
-def extraer_camino(mapa, tipo_camino):
-    """
-    Extrae y ordena las coordenadas del camino (path) en el mapa.
+def _vecinos(x, y):
+    """Genera las celdas vecinas en las cuatro direcciones cardinales."""
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        yield x + dx, y + dy
+
+
+def extraer_caminos(mapa, tipos_camino=(1,), tipo_inicio=3, tipo_fin=4):
+    """Obtiene todos los caminos válidos desde cada punto de inicio hasta el final.
 
     Args:
-        mapa (list[list[int]]): matriz que representa el mapa
-        tipo_camino (int): número que identifica el tipo de camino (1, 5, 6, etc.)
-    
+        mapa: Matriz que describe el terreno del mapa.
+        tipos_camino: Valores considerados como casillas transitables.
+        tipo_inicio: Valor que representa una casilla de inicio.
+        tipo_fin: Valor que representa la casilla final.
+
     Returns:
-        list[tuple[int, int]]: lista ordenada de coordenadas (x, y) del camino
+        list[list[tuple[int, int]]]: Lista de caminos, uno por cada punto de inicio.
+
     """
-    coordenadas = []
-    fin_pos = None
-
-    for fila_idx, fila in enumerate(mapa):
-        for col_idx, tipo in enumerate(fila):
-            if tipo == tipo_camino or tipo == 3:  # 3 = inicio
-                coordenadas.append((col_idx, fila_idx))
-            elif tipo == 4:  # 4 = fin
-                fin_pos = (col_idx, fila_idx)
-
-    if not coordenadas:
+    if not mapa:
         return []
 
-    camino_ordenado = [coordenadas[0]]
-    sin_visitar = coordenadas[1:]
+    filas = len(mapa)
+    columnas = len(mapa[0]) if filas else 0
 
-    while sin_visitar:
-        ultima = camino_ordenado[-1]
-        siguiente = None
-        distancia_min = float('inf')
+    permitidos = set(tipos_camino)
+    permitidos.update({tipo_inicio, tipo_fin})
 
-        for coord in sin_visitar:
-            dist = abs(coord[0] - ultima[0]) + abs(coord[1] - ultima[1])
-            if dist <= 1 and dist < distancia_min:
-                distancia_min = dist
-                siguiente = coord
+    inicios = [
+        (col_idx, fila_idx)
+        for fila_idx, fila in enumerate(mapa)
+        for col_idx, valor in enumerate(fila)
+        if valor == tipo_inicio
+    ]
 
-        if siguiente:
-            camino_ordenado.append(siguiente)
-            sin_visitar.remove(siguiente)
-        else:
-            break
+    if not inicios:
+        for fila_idx, fila in enumerate(mapa):
+            for col_idx, valor in enumerate(fila):
+                if valor in permitidos:
+                    inicios.append((col_idx, fila_idx))
+                    break
+            if inicios:
+                break
 
-    if fin_pos:
-        camino_ordenado.append(fin_pos)
+    caminos = []
 
-    return camino_ordenado
+    for inicio in inicios:
+        cola = deque([inicio])
+        visitados = {inicio}
+        padres = {}
+        destino = None
+
+        while cola:
+            actual = cola.popleft()
+            x, y = actual
+
+            if mapa[y][x] == tipo_fin:
+                destino = actual
+                break
+
+            for nx, ny in _vecinos(x, y):
+                if not (0 <= nx < columnas and 0 <= ny < filas):
+                    continue
+                if (nx, ny) in visitados:
+                    continue
+                if mapa[ny][nx] not in permitidos:
+                    continue
+                visitados.add((nx, ny))
+                padres[(nx, ny)] = actual
+                cola.append((nx, ny))
+
+        if destino is None:
+            continue
+
+        camino = []
+        nodo = destino
+        while nodo in padres:
+            camino.append(nodo)
+            nodo = padres[nodo]
+        camino.append(nodo)
+        camino.reverse()
+
+        caminos.append(camino)
+
+    return caminos
+
+def extraer_camino(mapa, tipo_camino):
+    """Compatibilidad hacia atrás: devuelve el primer camino encontrado."""
+
+    caminos = extraer_caminos(mapa, (tipo_camino,))
+    return caminos[0] if caminos else []
 
 def crear_sprite_simple(tipo, tamaño=TILE_SIZE):
     """Genera una superficie sólida utilizando el color base del tipo indicado."""

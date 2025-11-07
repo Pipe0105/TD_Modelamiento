@@ -4,7 +4,8 @@ map_level_1.py
 Mapa del Nivel 1: "Camino de Gracia"
 """
 
-from .map_utils import cargar_sprite, Tile, extraer_camino
+from .map_utils import cargar_sprite, Tile, extraer_caminos
+
 
 import pygame
 
@@ -31,6 +32,18 @@ CONFIG_NIVEL_1 = {
     "dinero_inicial": 150,
     "vidas_inicial": 3,
     "multiplicadores": {"velocidad": 1.0, "salud": 1.0, "lambda": 1.0},
+    "crecimiento_oleada": {"velocidad": 1.04, "salud": 1.08},
+    "enemigos": [
+        {
+            "nombre": "Explorador",
+            "peso": 1.0,
+            "velocidad": (1.2, 2.2),
+            "salud": (70, 120),
+            "recompensa": 12,
+            "color": (200, 70, 70),
+            "radio": 10,
+        }
+    ],
 }
 
 def crear_mapa_nivel_1():
@@ -56,10 +69,6 @@ def crear_mapa_nivel_1():
             tile = Tile(col_idx, fila_idx, tipo, sprites)
             tiles.add(tile)
 
-    caminos = []
-    for tipo in [1, 5]:
-        camino = extraer_camino(MAPA_NIVEL_1, tipo)
-        if camino:
-            caminos.append(camino)
+    caminos = extraer_caminos(MAPA_NIVEL_1, (1, 5))
 
     return tiles, caminos

@@ -4,7 +4,8 @@ map_level_2.py
 Mapa del Nivel 2: "Valle Dividido"
 """
 
-from .map_utils import cargar_sprite, Tile, extraer_camino
+from .map_utils import cargar_sprite, Tile, extraer_caminos
+
 
 
 import pygame
@@ -35,6 +36,38 @@ CONFIG_NIVEL_2 = {
     "dinero_inicial": 170,
     "vidas_inicial": 3,
     "multiplicadores": {"velocidad": 1.15, "salud": 1.2, "lambda": 1.15},
+    "crecimiento_oleada": {"velocidad": 1.06, "salud": 1.15},
+    "enemigos": [
+        {
+            "nombre": "Explorador",
+            "peso": 0.55,
+            "velocidad": (1.3, 2.4),
+            "salud": (90, 150),
+            "recompensa": 15,
+            "color": (210, 80, 80),
+            "radio": 10,
+        },
+        {
+            "nombre": "Guardia",
+            "peso": 0.3,
+            "velocidad": (1.1, 1.9),
+            "salud": (140, 210),
+            "salud_factor": 1.2,
+            "recompensa": 22,
+            "color": (200, 120, 60),
+            "radio": 12,
+        },
+        {
+            "nombre": "Asaltante",
+            "peso": 0.15,
+            "velocidad": (1.8, 2.8),
+            "velocidad_factor": 1.15,
+            "salud": (100, 150),
+            "recompensa": 18,
+            "color": (230, 60, 120),
+            "radio": 10,
+        },
+    ],
 }
 
 def crear_mapa_nivel_2():
@@ -60,11 +93,6 @@ def crear_mapa_nivel_2():
             tile = Tile(col_idx, fila_idx, tipo, sprites)
             tiles.add(tile)
 
-    caminos = []
-    for tipo in [1]:
-
-        camino = extraer_camino(MAPA_NIVEL_2, tipo)
-        if camino:
-            caminos.append(camino)
+    caminos = extraer_caminos(MAPA_NIVEL_2, (1,))
 
     return tiles, caminos

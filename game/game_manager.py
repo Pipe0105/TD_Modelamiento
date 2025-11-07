@@ -36,6 +36,7 @@ class GameManager:
         self.spots: List[BuildSpot] = []
         self.towers: List[Tower] = []
         self.enemies: List[Enemy] = []
+        self.enemy_tiers: List[dict] = []
 
         # Control de oleadas
         self.spawn_timer = 0.0
@@ -51,6 +52,8 @@ class GameManager:
         self.money = settings.STARTING_MONEY
         self.total_spawned = 0
         self.metrics_panel = MetricsPanel(self.font)
+        self.wave_speed_growth = 1.0
+        self.wave_health_growth = 1.0
 
         self.menu_buttons = self._build_menu_buttons()
         self.overlay_buttons: List[dict] = []
@@ -126,6 +129,10 @@ class GameManager:
         self.health_multiplier = multipliers.get("salud", 1.0)
         lambda_multiplier = multipliers.get("lambda", 1.0)
         self.lambda_base = settings.LAMBDA_RATE * lambda_multiplier
+        crecimiento = self.level_config.get("crecimiento_oleada", {})
+        self.wave_speed_growth = crecimiento.get("velocidad", 1.05)
+        self.wave_health_growth = crecimiento.get("salud", 1.1)
+        self.enemy_tiers = self.level_config.get("enemigos", [])
         self.enemy_interval = random.expovariate(self.lambda_base)
         self.wave = 1
         self.target_waves = self.level_config.get("oleadas_victoria", 5)
@@ -206,7 +213,7 @@ class GameManager:
 
         # Actualizar enemigos (posición, vida)
         for enemy in list(self.enemies):
-            enemy.update()
+            enemy.update(dt)
 
             # Si el enemigo llega al final del camino, se pierde una vida
             if enemy.index >= len(enemy.path) - 1:
@@ -229,15 +236,30 @@ class GameManager:
     def spawn_enemy(self):
         if not self.paths:
             return
-        path = self.paths[0]
+        path = random.choice(self.paths)
 
-        self.enemies.append(
-            Enemy(
-                path,
-                speed_multiplier=self.speed_multiplier,
-                health_multiplier=self.health_multiplier,
-            )
+        
+        skin_index = 0
+        if self.current_level_index is not None:
+            skin_index = min(self.current_level_index, 3)
+            sprite_set=str(skin_index + 1),
+
+
+        tier = self._choose_enemy_tier()
+
+        velocidad_factor = tier.get("velocidad_factor", 1.0)
+        salud_factor = tier.get("salud_factor", 1.0)
+        enemy = Enemy(
+            path,
+            speed_range=tier.get("velocidad", (1.5, 3.0)),
+            health_range=tier.get("salud", (80, 150)),
+            reward=tier.get("recompensa"),
+            speed_multiplier=self.speed_multiplier * velocidad_factor,
+            health_multiplier=self.health_multiplier * salud_factor,
+            radius=tier.get("radio", 10),
+            color=tier.get("color"),
         )
+        self.enemies.append(enemy)
         self.total_spawned += 1
 
     
@@ -248,10 +270,31 @@ class GameManager:
         self.wave += 1
         self.enemies_per_wave = int(self.enemies_per_wave * 1.2) + 2
         self.lambda_base *= 1.08
+        self.speed_multiplier *= self.wave_speed_growth
+        self.health_multiplier *= self.wave_health_growth
         self.spawned_in_wave = 0
         self.wave_active = True
         self.enemy_interval = random.expovariate(self.lambda_base)
         print(f"--- Inicia Oleada {self.wave} ---")
+        print(
+            f"Multiplicadores actuales -> Velocidad: {self.speed_multiplier:.2f}, Salud: {self.health_multiplier:.2f}"
+        )
+
+    def _choose_enemy_tier(self) -> dict:
+        if not self.enemy_tiers:
+            return {}
+        pesos = [max(0.0, tier.get("peso", 1.0)) for tier in self.enemy_tiers]
+        if sum(pesos) <= 0:
+            pesos = None
+        return random.choices(self.enemy_tiers, weights=pesos, k=1)[0]
+
+    @staticmethod
+    def _format_multiplier(multiplier: float) -> str:
+        delta = (multiplier - 1.0) * 100
+        if abs(delta) < 0.05:
+            return "±0%"
+        signo = "+" if delta > 0 else ""
+        return f"{signo}{delta:.1f}%"
 
     def trigger_game_over(self):
         if self.state != "playing":
@@ -375,9 +418,18 @@ class GameManager:
                 continue
             config = self.levels[idx]["config"]
             multipliers = config.get("multiplicadores", {})
+            salud_pct = self._format_multiplier(multipliers.get("salud", 1.0))
+            vel_pct = self._format_multiplier(multipliers.get("velocidad", 1.0))
+            lambda_pct = self._format_multiplier(multipliers.get("lambda", 1.0))
             info = self.font.render(
-                f"Oleadas: {config.get('oleadas_victoria', 0)} | Salud x{multipliers.get('salud', 1.0):.2f} | Velocidad x{multipliers.get('velocidad', 1.0):.2f}",
-                True,
+                " | ".join(
+                    [
+                        f"Oleadas: {config.get('oleadas_victoria', 0)}",
+                        f"Salud {salud_pct}",
+                        f"Velocidad {vel_pct}",
+                        f"Aparición {lambda_pct}",
+                    ]
+                ),                True,
                 (180, 180, 180),
             )
             info_rect = info.get_rect(center=(button["rect"].centerx, button["rect"].bottom + 18))
