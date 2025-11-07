@@ -57,6 +57,13 @@ class GameManager:
 
         self.menu_buttons = self._build_menu_buttons()
         self.overlay_buttons: List[dict] = []
+        self.pause_button = self._make_button(
+            "Menú",
+            (settings.SCREEN_WIDTH - 110, 45),
+            self.enter_pause_menu,
+            size=(180, 50),
+        )
+        self._wave_was_active = True
 
     # ------------------------------------------------------------------
     # Configuración de niveles
@@ -77,8 +84,8 @@ class GameManager:
             )
         return buttons
 
-    def _make_button(self, text, center, action, level_index=None) -> dict:
-        rect = pygame.Rect(0, 0, 320, 60)
+    def _make_button(self, text, center, action, level_index=None, size=(320, 60)) -> dict:
+        rect = pygame.Rect(0, 0, *size)
         rect.center = center
         return {"rect": rect, "text": text, "action": action, "level_index": level_index}
 
@@ -144,12 +151,37 @@ class GameManager:
         self.lives = self.level_config.get("vidas_inicial", settings.MAX_LIVES)
         self.metrics_panel.visible = False
         self.overlay_buttons = []
+        self._wave_was_active = True
+        self.pause_button["text"] = "Menú"
         self.state = "playing"
         print(f"--- Inicia Nivel {index + 1}: {self.level_config['nombre']} ---")
 
     def restart_level(self):
         if self.current_level_index is not None:
             self.load_level(self.current_level_index)
+
+    def enter_pause_menu(self):
+        if self.state != "playing":
+            return
+        self._wave_was_active = self.wave_active
+        self.wave_active = False
+        self.state = "paused"
+        self.pause_button["text"] = "Reanudar"
+        self._set_overlay_buttons(
+            [
+                ("Continuar", self.resume_from_pause),
+                ("Reiniciar nivel", self.restart_level),
+                ("Volver al menú", self.back_to_menu),
+            ]
+        )
+
+    def resume_from_pause(self):
+        if self.state != "paused":
+            return
+        self.overlay_buttons = []
+        self.state = "playing"
+        self.wave_active = self._wave_was_active
+        self.pause_button["text"] = "Menú"
 
     def advance_to_next_level(self):
         if self.current_level_index is None:
@@ -177,6 +209,8 @@ class GameManager:
         self.lives = settings.MAX_LIVES
         self.metrics_panel.visible = False
         self.overlay_buttons = []
+        self._wave_was_active = True
+        self.pause_button["text"] = "Menú"
 
     # ------------------------------------------------------------------
     # Lógica principal del juego
@@ -338,6 +372,14 @@ class GameManager:
                     break
             return
         
+        if self.state in {"playing", "paused"}:
+            if self.pause_button["rect"].collidepoint(pos):
+                if self.state == "playing":
+                    self.enter_pause_menu()
+                else:
+                    self.resume_from_pause()
+                return
+        
         if self.state == "playing":
             if self.metrics_panel.handle_click(pos):
                 return
@@ -349,7 +391,7 @@ class GameManager:
                         self.towers.append(Tower(spot.pos))
                         spot.occupied = True
                     return
-        elif self.state in {"game_over", "level_complete", "victory"}:
+        elif self.state in {"game_over", "level_complete", "victory", "paused"}:
             for button in self.overlay_buttons:
                 if button["rect"].collidepoint(pos):
                     button["action"]()
@@ -377,7 +419,8 @@ class GameManager:
             enemy.draw(surface)
         self._draw_hud(surface)
 
-        if self.state in {"game_over", "level_complete", "victory"}:
+        if self.state in {"game_over", "level_complete", "victory", "paused"}:
+
             self._draw_overlay(surface)
 
     def _draw_hud(self, surface):
@@ -393,10 +436,9 @@ class GameManager:
         lives_text = self.font.render(f"Vidas restantes: {self.lives}", True, (255, 200, 200))
         surface.blit(lives_text, (10, 40))
 
-        # Si está visible, calcular métricas y mostrarlas
-        self.metrics_panel.draw_button(surface)
-        metrics = self.calculate_metrics()
-        self.metrics_panel.draw_panel(surface, metrics)
+
+        if self.state in {"playing", "paused"}:
+            self._draw_button(surface, self.pause_button)
 
     def _draw_menu(self, surface):
         title = self.title_font.render("Tower Defense - Selección de mapas", True, (255, 255, 255))
@@ -446,9 +488,12 @@ class GameManager:
         elif self.state == "level_complete":
             title_text = "Nivel completado"
             message = "Prepárate para un desafío mayor."
-        else:
+        elif self.state == "victory":
             title_text = "¡Victoria total!"
             message = "Has superado todos los mapas disponibles."
+        else:
+            title_text = "Menú de pausa"
+            message = "Selecciona una opción para continuar."
 
         title = self.title_font.render(title_text, True, (255, 255, 255))
         title_rect = title.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 80))
