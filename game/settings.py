@@ -7,38 +7,35 @@ FPS = 60
 SCALE = 1.5
 
 # parametros de simulacion visual
-
 LAMBDA_RATE = 0.5
 
 # Camino temporal (lista de coordenadas)
 PATH = [(int(x * SCALE), int(y * SCALE)) for (x, y) in [
     (50, 300), (150, 300), (250, 250),
     (350, 250), (450, 300), (550, 350),
-    (700, 350), (750, 400)
+    (700, 350), (750, 400),     (750, 50), (500, 60), (600,400)
 ]]
 
 # Lugares donde se pueden colocar torres
 BUILD_SPOTS = [(int(x * SCALE), int(y * SCALE)) for (x, y) in [
-    (200, 150), (400, 150), (600, 200)
+    (200, 150), (400, 150), (650, 200), (700, 400)   #añae otr atore en
 ]]
 
 
 # Economia
-
 STARTING_MONEY = 100
 TOWER_COST = 50
 ENEMY_REWARD = 15
 
 # Torres
 
-TOWER_RANGE = 220       # antes 150
-TOWER_FIRE_RATE = 1.5   # antes 1.0
-PROJECTILE_SPEED = 6
-PROJECTILE_DAMAGE = 50
+TOWER_RANGE = 700       # antes 220
+TOWER_FIRE_RATE = 12   # antes 1.5
+PROJECTILE_SPEED = 40  #antes 6
+PROJECTILE_DAMAGE = 2 # antes 200
 
 
 # colores (tema)
-
 COLORS = {
     "bg": (30, 30, 40),
     "path": (120, 120, 120),

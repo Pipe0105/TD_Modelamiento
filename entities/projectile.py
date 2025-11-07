@@ -1,13 +1,14 @@
 # entities/projectile.py
 import pygame, math
 from game import settings
+import random
 
 class Projectile:
     def __init__(self, pos, target):
         self.pos = list(pos)
         self.target = target
-        self.speed = settings.PROJECTILE_SPEED
-        self.damage = settings.PROJECTILE_DAMAGE
+        self.speed =  random.uniform(4, 30)   #settings.PROJECTILE_SPEED
+        self.damage =  random.uniform(10, 100)   #settings.PROJECTILE_DAMAGE 
         self.alive = True
 
     def update(self):

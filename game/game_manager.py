@@ -7,15 +7,22 @@ from entities.build_spot import BuildSpot
 from utils.helpers import draw_path
 from utils.ui_panel import MetricsPanel
 
+import tkinter as tk
+from tkinter import messagebox
+
 class GameManager:
     def __init__(self):
+
+        root = tk.Tk()
+        root.withdraw()
+
         self.enemies = []
         self.towers = []
         self.spots = [BuildSpot(p) for p in settings.BUILD_SPOTS]
         self.spawn_timer = 0
         self.enemy_interval = random.expovariate(settings.LAMBDA_RATE)
         self.wave = 1
-        self.enemies_per_wave = 10
+        self.enemies_per_wave = 14
         self.spawned_in_wave = 0
         self.wave_active = True
         self.lambda_base = settings.LAMBDA_RATE
@@ -61,7 +68,7 @@ class GameManager:
                 self.enemies.remove(enemy)
                 self.lives -= 1
                 if self.lives <= 0:
-                    self.game_over()
+                    self.lives = 40   #----- cambio aqui va game over 
 
         # Eliminar enemigos muertos y sumar dinero
         for enemy in list(self.enemies):
@@ -81,7 +88,6 @@ class GameManager:
     
 
     def next_wave(self):
-       
         # Inicia la siguiente oleada, aumentando dificultad.
         self.wave += 1
         self.enemies_per_wave += 5
@@ -91,18 +97,25 @@ class GameManager:
         self.wave_active = True
         
     def handle_click(self, pos):
+
+
         print(f"[DEBUG] Clic detectado en {pos}")  # opcional para verificar
 
         # Primero intenta alternar el panel de métricas
         if self.metrics_panel.handle_click(pos):
             return  # si fue clic en el botón, no sigue con torres
 
+        respuesta = messagebox.askyesno(
+                 "Cuadro de diálogo", "¿Deseas continuar?"
+                                                            )
+        
+
         # Si no fue sobre el botón, intenta construir torre
         for spot in self.spots:
             if spot.rect.collidepoint(pos) and not spot.occupied:
                 if self.money >= settings.TOWER_COST:
                     self.money -= settings.TOWER_COST
-                    self.towers.append(Tower(spot.pos))
+                    self.towers.append(Tower(spot.pos, respuesta))
                     spot.occupied = True
 
 

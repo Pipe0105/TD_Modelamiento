@@ -2,12 +2,21 @@
 import pygame, math, time
 from game import settings
 from entities.projectile import Projectile
+import random
 
 class Tower:
-    def __init__(self, pos):
+    def __init__(self, pos, respuesta):
         self.pos = pos
-        self.range = settings.TOWER_RANGE
-        self.fire_rate = settings.TOWER_FIRE_RATE
+
+        if(respuesta):
+            self.range = 800        ## settings.TOWER_RANGE
+            self.fire_rate =  5  
+        else:
+            self.range = 400        ## settings.TOWER_RANGE
+            self.fire_rate =  12
+        
+              ## settings.TOWER_FIRE_RATE
+
         self.last_shot = 0
         self.projectiles = []
 
