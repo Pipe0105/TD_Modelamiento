@@ -42,6 +42,13 @@ class Enemy:
             color if color is not None else settings.get_color("enemy", (200, 60, 60))
         )
 
+                # Superficie de respaldo utilizada cuando no existen fotogramas reales.
+        # Mantener un placeholder permanente evita parpadeos visibles al cambiar
+        # entre sprites o cuando un conjunto carece de ciertas direcciones.
+        self.placeholder_image = self._create_placeholder_surface(
+            self.base_radius, self.base_color
+        )
+
         # Configuración visual / animación
         self.sprite_set = str(sprite_set) if sprite_set else "1"
         self.sprites = self._load_sprite_set(
@@ -53,6 +60,7 @@ class Enemy:
         self.animation_timer = 0.0
         self.animation_speed = 6.0  # frames por segundo
         self.current_image: pygame.Surface | None = None
+        self.visible_image: pygame.Surface | None = self.placeholder_image
         self.rect: pygame.Rect | None = None
         self.radius = self.base_radius
         self.collision_radius = max(10, self.base_radius // 2)
@@ -206,19 +214,30 @@ class Enemy:
 
     def _update_image(self, force: bool = False):
         if not self.sprites:
+            if self.current_image is None:
+                self.current_image = self.placeholder_image
+                self.visible_image = self.placeholder_image
+                self.rect = self.placeholder_image.get_rect()
+                self._sync_rect_position()
             return
 
         frames = self.sprites.get(self.direction, [])
-        if not frames:
-            return
+        frame: pygame.Surface | None
+        if frames:
+            frame = frames[self.frame_index % len(frames)]
+        else:
+            frame = self.placeholder_image
 
-        frame = frames[self.frame_index % len(frames)]
-        if self.direction == "side" and self.facing_left:
+        if self.direction == "side" and frame is not None and self.facing_left:
+
             frame = pygame.transform.flip(frame, True, False)
+        if frame is None:
+            frame = self.placeholder_image
 
         if force or self.current_image is not frame:
             self.current_image = frame
-            self.rect = self.current_image.get_rect()
+            self.visible_image = frame
+            self.rect = frame.get_rect()
             self._sync_rect_position()
 
         if not self.radius:
@@ -226,8 +245,10 @@ class Enemy:
         self.collision_radius = max(10, self.radius // 2)
 
     def _sync_rect_position(self):
-        if not self.rect and self.current_image:
-            self.rect = self.current_image.get_rect()
+        if not self.rect:
+            reference = self.current_image or self.visible_image or self.placeholder_image
+            if reference is not None:
+                self.rect = reference.get_rect()
 
         if self.rect:
             self.rect.center = (int(self.pos[0]), int(self.pos[1]))
@@ -236,21 +257,29 @@ class Enemy:
     # Renderizado
     # ------------------------------------------------------------------
     def draw(self, surface: pygame.Surface):
-        if self.current_image and self.rect:
-            surface.blit(self.current_image, self.rect)
-            bar_width = max(self.rect.width, 36)
-            bar_height = 6
-            bar_x = self.rect.centerx - bar_width // 2
-            bar_y = self.rect.top - bar_height - 6
-        else:
+        image = self.current_image or self.visible_image or self.placeholder_image
+        rect = self.rect
+
+        if image is None:
             center = (int(self.pos[0]), int(self.pos[1]))
             pygame.draw.circle(surface, self.base_color, center, self.base_radius)
-
-
             bar_width = 36
             bar_height = 6
             bar_x = center[0] - bar_width // 2
             bar_y = center[1] - self.base_radius - bar_height - 4
+        else:
+            if rect is None:
+                rect = image.get_rect()
+                self.rect = rect
+            self._sync_rect_position()
+            if self.rect:
+                rect = self.rect
+            surface.blit(image, rect)
+
+            bar_width = max(rect.width, 36)
+            bar_height = 6
+            bar_x = rect.centerx - bar_width // 2
+            bar_y = rect.top - bar_height - 6
 
 
         # Barra de vida
