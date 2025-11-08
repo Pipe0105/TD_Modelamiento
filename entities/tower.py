@@ -25,19 +25,16 @@ class Tower:
     )
     _image_cache: pygame.Surface | None = None
 
-    def __init__(self, pos, respuesta):
+    def __init__(self, pos, tower_type: str = "guardian"):
         self.pos = (int(pos[0]), int(pos[1]))
+        self.type_key = tower_type
+        self.type_config = self._resolve_type_config(tower_type)
 
-        if(respuesta):
-            self.range = 800        ## settings.TOWER_RANGE
-            self.fire_rate =  5  
-        else:
-            self.range = 400        ## settings.TOWER_RANGE
-            self.fire_rate =  12
-
-              ## settings.TOWER_FIRE_RATE
-
-        self.damage = settings.PROJECTILE_DAMAGE
+        self.range = self.type_config.get("range", settings.TOWER_RANGE)
+        self.fire_rate = self.type_config.get("fire_rate", settings.TOWER_FIRE_RATE)
+        self.damage = self.type_config.get("damage", settings.PROJECTILE_DAMAGE)
+        self.projectile_speed = self.type_config.get("projectile_speed", settings.PROJECTILE_SPEED)
+        self.name = self.type_config.get("label", "Torre")
         self.upgrade_levels = {key: 0 for key in settings.TOWER_UPGRADES}
         self.last_shot = 0
         self.projectiles = []
@@ -73,7 +70,12 @@ class Tower:
 
     def shoot(self, target):
         """Crea un proyectil que sigue a su objetivo"""
-        projectile = Projectile(list(self.pos), target, self.damage)
+        projectile = Projectile(
+            list(self.pos),
+            target,
+            damage=self.damage,
+            speed=self.projectile_speed,
+        )
         self.projectiles.append(projectile)
         print(f"Torre en {self.pos} disparó a enemigo en {target.pos}")
 
@@ -166,3 +168,19 @@ class Tower:
         # Dibujar proyectiles
         for p in self.projectiles:
             p.draw(surface)
+
+    @staticmethod
+    def _resolve_type_config(tower_type: str) -> dict:
+        config = settings.TOWER_TYPES.get(tower_type)
+        if config is None:
+            # Fallback al primer tipo disponible o configuración por defecto
+            if settings.TOWER_TYPES:
+                return next(iter(settings.TOWER_TYPES.values()))
+            return {
+                "label": "Torre",
+                "range": settings.TOWER_RANGE,
+                "fire_rate": settings.TOWER_FIRE_RATE,
+                "damage": settings.PROJECTILE_DAMAGE,
+                "projectile_speed": settings.PROJECTILE_SPEED,
+            }
+        return dict(config)

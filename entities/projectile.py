@@ -1,15 +1,17 @@
 # entities/projectile.py
-import pygame, math
+import math
+
+import pygame
+
 from game import settings
-import random
 
 
 class Projectile:
-    def __init__(self, pos, target, damage):
+    def __init__(self, pos, target, damage, speed=None):
         self.pos = list(pos)
         self.target = target
-        self.speed =  random.uniform(4, 30)   #settings.PROJECTILE_SPEED
-        self.damage =  random.uniform(10, 100)   #settings.PROJECTILE_DAMAGE 
+        self.speed = speed if speed is not None else settings.PROJECTILE_SPEED
+        self.damage = damage
         self.alive = True
 
     def update(self):
@@ -37,4 +39,9 @@ class Projectile:
 
 
     def draw(self, surface):
-        pygame.draw.circle(surface, settings.COLORS["projectile"], (int(self.pos[0]), int(self.pos[1])), 7)
+        pygame.draw.circle(
+            surface,
+            settings.COLORS["projectile"],
+            (int(self.pos[0]), int(self.pos[1])),
+            7,
+        )

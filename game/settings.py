@@ -31,6 +31,40 @@ STARTING_MONEY = 100
 TOWER_COST = 50
 ENEMY_REWARD = 15
 
+# Tipos de torres disponibles
+# Cada tipo define los atributos base de la torre y su costo específico.
+# "guardian" es el tipo clásico equilibrado; "centinela" prioriza el alcance y daño;
+# "ráfaga" dispara con mayor frecuencia pero con menor daño por proyectil.
+TOWER_TYPES = {
+    "guardian": {
+        "label": "Torre Guardián",
+        "description": "Equilibrada en alcance, daño y cadencia.",
+        "cost": 55,
+        "range": 420,
+        "fire_rate": 10,
+        "damage": 55,
+        "projectile_speed": 8,
+    },
+    "centinela": {
+        "label": "Torre Centinela",
+        "description": "Gran alcance y daño, pero dispara más lento.",
+        "cost": 75,
+        "range": 780,
+        "fire_rate": 5,
+        "damage": 85,
+        "projectile_speed": 9,
+    },
+    "rafaga": {
+        "label": "Torre Ráfaga",
+        "description": "Cadencia altísima para frenar grandes grupos.",
+        "cost": 65,
+        "range": 360,
+        "fire_rate": 16,
+        "damage": 40,
+        "projectile_speed": 11,
+    },
+}
+
 # Torres
 
 TOWER_RANGE = 220       # antes 150
@@ -42,18 +76,21 @@ PROJECTILE_DAMAGE = 50
 TOWER_UPGRADES = {
     "damage": {
         "label": "Daño",
+        "description": "Aumenta el daño directo por proyectil.",
         "cost": 70,
         "increment": 20,
         "max_level": 3,
     },
     "fire_rate": {
         "label": "Vel. disparo",
+        "description": "Disminuye el tiempo entre disparos.",
         "cost": 85,
         "increment": 0.5,
         "max_level": 3,
     },
     "range": {
         "label": "Rango",
+        "description": "Amplía el área de cobertura de la torre.",
         "cost": 60,
         "increment": 35,
         "max_level": 3,
