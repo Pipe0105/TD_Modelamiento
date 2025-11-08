@@ -4,11 +4,11 @@ from game import settings
 import random
 
 class Projectile:
-    def __init__(self, pos, target):
+    def __init__(self, pos, target, damage,speed):
         self.pos = list(pos)
         self.target = target
-        self.speed =  random.uniform(4, 30)   #settings.PROJECTILE_SPEED
-        self.damage =  random.uniform(10, 100)   #settings.PROJECTILE_DAMAGE 
+        self.speed =  speed   #settings.PROJECTILE_SPEED
+        self.damage =  damage   #settings.PROJECTILE_DAMAGE 
         self.alive = True
 
     def update(self):

@@ -8,14 +8,24 @@ class Tower:
     def __init__(self, pos, respuesta):
         self.pos = pos
 
-        if(respuesta):
-            self.range = 800        ## settings.TOWER_RANGE
-            self.fire_rate =  5  
-        else:
-            self.range = 400        ## settings.TOWER_RANGE
+        if(respuesta=="Tirador"):
+            self.range = 500        ## settings.TOWER_RANGE
+            self.fire_rate =  0.2  
+            self.damage = 50
+            self.speed = 20
+
+        elif(respuesta =="Metralla"):
+            self.range = 200        ## settings.TOWER_RANGE
             self.fire_rate =  12
-        
-              ## settings.TOWER_FIRE_RATE
+            self.damage = 4
+            self.speed = 13  ## settings.TOWER_FIRE_RATE
+            
+        elif(respuesta == "seguidor"):
+            self.range = 300        ## settings.TOWER_RANGE
+            self.fire_rate =  0.3  
+            self.damage = 300
+            self.speed = 2.5
+
 
         self.last_shot = 0
         self.projectiles = []
@@ -50,7 +60,7 @@ class Tower:
 
     def shoot(self, target):
         """Crea un proyectil que sigue a su objetivo"""
-        projectile = Projectile(list(self.pos), target)
+        projectile = Projectile(list(self.pos), target, self.damage, self.speed)
         self.projectiles.append(projectile)
         print(f"Torre en {self.pos} disparó a enemigo en {target.pos}")
 

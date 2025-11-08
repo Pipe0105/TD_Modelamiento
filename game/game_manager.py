@@ -9,12 +9,16 @@ from utils.ui_panel import MetricsPanel
 
 import tkinter as tk
 from tkinter import messagebox
+from utils.custom_dialog import show_custom_dialog 
+
 
 class GameManager:
     def __init__(self):
 
-        root = tk.Tk()
-        root.withdraw()
+        self.tk_root = tk.Tk()
+        #self.tk_root.withdraw()
+        
+        #self.tk_root.title("SELECCION DE TORRES")
 
         self.enemies = []
         self.towers = []
@@ -68,7 +72,7 @@ class GameManager:
                 self.enemies.remove(enemy)
                 self.lives -= 1
                 if self.lives <= 0:
-                    self.lives = 40   #----- cambio aqui va game over 
+                    self.lives = 40   #-------------------------------------------- cambio aqui va game over 
 
         # Eliminar enemigos muertos y sumar dinero
         for enemy in list(self.enemies):
@@ -97,17 +101,24 @@ class GameManager:
         self.wave_active = True
         
     def handle_click(self, pos):
-
-
         print(f"[DEBUG] Clic detectado en {pos}")  # opcional para verificar
 
         # Primero intenta alternar el panel de métricas
         if self.metrics_panel.handle_click(pos):
             return  # si fue clic en el botón, no sigue con torres
-
-        respuesta = messagebox.askyesno(
-                 "Cuadro de diálogo", "¿Deseas continuar?"
-                                                            )
+        
+        opciones_torre = ["Metralla", "Tirador", "seguidor","Cancelar"]
+        # Llamamos al diálogo personalizado, usando self.tk_root como ventana padre
+        respuesta = show_custom_dialog(
+            parent=self.tk_root, 
+            title="Selecciona Tipo de Torre", 
+            question="Elige el tipo de torre a construir:", 
+            options=opciones_torre
+            )  
+        # La ejecución se pausa aquí hasta que el usuario hace clic en el diálogo
+        if respuesta == "Cancelar" or respuesta is None:
+            print("Construcción cancelada.")
+            return # Salir del método sin construir nada
         
 
         # Si no fue sobre el botón, intenta construir torre
@@ -142,5 +153,6 @@ class GameManager:
         # Si está visible, calcular métricas y mostrarlas
         metrics = self.calculate_metrics()
         self.metrics_panel.draw_panel(surface, metrics)
+
 
 

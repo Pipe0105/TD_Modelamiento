@@ -11,14 +11,22 @@ LAMBDA_RATE = 0.5
 
 # Camino temporal (lista de coordenadas)
 PATH = [(int(x * SCALE), int(y * SCALE)) for (x, y) in [
+    (50, 450),
+
     (50, 300), (150, 300), (250, 250),
-    (350, 250), (450, 300), (550, 350),
-    (700, 350), (750, 400),     (750, 50), (500, 60), (600,400)
+    (350, 250), (500, 300), (800,300),
+
+    (800, 50),   (500,50),( 500,100), (550,100),
+     
+    
+
+    (550, 500)
+
 ]]
 
 # Lugares donde se pueden colocar torres
 BUILD_SPOTS = [(int(x * SCALE), int(y * SCALE)) for (x, y) in [
-    (200, 150), (400, 150), (650, 200), (700, 400)   #añae otr atore en
+    (100, 150), (400, 150), (700, 200), (700, 400) , (300,450)  #añae otr atore en
 ]]
 
 
