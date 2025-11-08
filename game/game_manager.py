@@ -722,18 +722,40 @@ class GameManager:
             border_color = (150, 210, 120) if enabled else (120, 130, 150)
             pygame.draw.rect(surface, border_color, rect, width=2, border_radius=10)
 
-            padding_x = 16
-            padding_y = 10
+            padding_x = 20
+            padding_y = 14
+            spacing_y = 8  # espacio entre líneas de texto
 
             label = config.get("label", key.title())
             increment = config.get("increment")
+
+            # Manejo del texto de incremento (por ejemplo +15%)
             if isinstance(increment, float):
-                inc_text = f"+{increment:.1f}" if increment else ""
+                inc_text = f"+{increment:.1f}%" if increment else ""
             else:
-                inc_text = f"+{increment}" if increment else ""
+                inc_text = f"+{increment}%" if increment else ""
 
             title_text = label if not inc_text else f"{label} {inc_text}"
-            title_color = (245, 245, 245) if enabled else (180, 180, 180)
+            title_color = (245, 245, 255) if enabled else (180, 180, 190)
+            desc_color = (215, 220, 240) if enabled else (160, 160, 180)
+
+            # ---------------------------------------------------------------
+            # Fondo con degradado vertical más limpio
+            # ---------------------------------------------------------------
+            card = pygame.Surface(rect.size, pygame.SRCALPHA)
+            top_color = (70, 80, 130)
+            bottom_color = (40, 45, 75)
+            for y in range(rect.height):
+                blend = y / max(1, rect.height - 1)
+                color = tuple(int(top_color[i] * (1 - blend) + bottom_color[i] * blend) for i in range(3))
+                pygame.draw.line(card, color, (0, y), (rect.width, y))
+            surface.blit(card, rect.topleft)
+
+            pygame.draw.rect(surface, (160, 180, 255), rect, width=2, border_radius=10)
+
+            # ---------------------------------------------------------------
+            # Título principal (centrado verticalmente arriba)
+            # ---------------------------------------------------------------
             title_rect = self._draw_text_with_shadow(
                 surface,
                 self.button_font,
@@ -743,211 +765,73 @@ class GameManager:
                 anchor="topleft",
             )
 
+            # ---------------------------------------------------------------
+            # Descripción multilínea (centrada dentro del botón)
+            # ---------------------------------------------------------------
             description = config.get("description")
             if description:
-                desc_color = (215, 220, 240) if enabled else (160, 160, 180)
-                self._draw_text_with_shadow(
-                    surface,
-                    self.small_font,
-                    description,
-                    desc_color,
-                    (rect.left + padding_x, title_rect.bottom + 4),
-                    anchor="topleft",
-                )
+                # función auxiliar para dividir texto si es muy largo
+                def wrap_text(text, font, max_width):
+                    words = text.split(" ")
+                    lines = []
+                    current_line = ""
+                    for word in words:
+                        test_line = f"{current_line} {word}".strip()
+                        if font.size(test_line)[0] <= max_width:
+                            current_line = test_line
+                        else:
+                            lines.append(current_line)
+                            current_line = word
+                    if current_line:
+                        lines.append(current_line)
+                    return lines
 
-            if not can_upgrade:
-                status_text = "Nivel máximo alcanzado"
-            else:
-                cost = config.get("cost", 0)
-                status_text = f"Costo: $ {cost}"
-                if not affordable:
-                    status_text += " · Reúne más recursos"
+                max_text_width = rect.width - 2 * padding_x
+                lines = wrap_text(description, self.small_font, max_text_width)
 
-            if max_level:
-                level_text = f"Nivel {level}/{max_level}"
-            else:
-                level_text = f"Nivel {level}"
+                # Empieza debajo del título
+                y = title_rect.bottom + spacing_y
+                for line in lines:
+                    self._draw_text_with_shadow(
+                        surface,
+                        self.small_font,
+                        line,
+                        desc_color,
+                        (rect.centerx, y),  # centrado horizontalmente
+                        anchor="midtop",
+                    )
+                    y += self.small_font.get_linesize() + 2
 
-            status_color = (225, 230, 240) if enabled else (170, 150, 150)
-            status_rect = self._draw_text_with_shadow(
-                surface,
-                self.small_font,
-                status_text,
-                status_color,
-                (rect.left + padding_x, rect.bottom - 24),
-                anchor="topleft",
-            )
+            # ---------------------------------------------------------------
+            # Badge de nivel (esquina superior derecha)
+            # ---------------------------------------------------------------
+            badge_width = 90
+            badge_height = 36
+            badge_rect = pygame.Rect(0, 0, badge_width, badge_height)
+            badge_rect.topright = (rect.right - 14, rect.top + 10)
 
-            level_badge = pygame.Surface((110, 30), pygame.SRCALPHA)
-            level_badge.fill((255, 255, 255, 40))
-            badge_rect = level_badge.get_rect()
-            badge_rect.topright = (rect.right - 16, rect.top + padding_y)
-            surface.blit(level_badge, badge_rect.topleft)
+            badge_surface = pygame.Surface(badge_rect.size, pygame.SRCALPHA)
+            badge_surface.fill((255, 235, 145, 230))
+            pygame.draw.rect(badge_surface, (200, 180, 90), badge_surface.get_rect(), width=2, border_radius=6)
+            surface.blit(badge_surface, badge_rect.topleft)
+
+            level_text = f"Nivel {config.get('level', 1)}"
             self._draw_text_with_shadow(
                 surface,
                 self.small_font,
                 level_text,
-                (240, 240, 255),
+                (40, 40, 40),
                 badge_rect.center,
+                anchor="center",
             )
 
-    def _draw_build_menu(self, surface):
-        if not self.build_menu:
-            return
-
-        spot: BuildSpot | None = self.build_menu.get("spot")
-        if spot and not spot.occupied:
-            pygame.draw.circle(surface, (240, 220, 140), spot.pos, spot.size // 2 + 12, 3)
-
-        panel_rect: pygame.Rect | None = self.build_menu.get("panel_rect")
-        if panel_rect:
-            backdrop = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
-            backdrop.fill((10, 14, 24, 180))
-            surface.blit(backdrop, panel_rect.topleft)
-
-        if spot and panel_rect:
-            if panel_rect.centerx > spot.pos[0]:
-                anchor = panel_rect.midleft
-            else:
-                anchor = panel_rect.midright
-            pygame.draw.line(surface, (220, 230, 255), spot.pos, anchor, 2)
-
-        blocked_type = self.build_menu.get("blocked")
-
-        for button in self.build_menu.get("buttons", []):
-            rect = button.get("rect")
-            if rect is None:
-                continue
-
-            config = button.get("config", {})
-            cost = config.get("cost", settings.TOWER_COST)
-            affordable = self.money >= cost
-            if affordable and blocked_type == button.get("type"):
-                self.build_menu["blocked"] = None
-                blocked_type = None
-
-            base_color = (70, 82, 132) if affordable else (45, 48, 72)
-            top_color = tuple(min(255, c + 30) for c in base_color)
-            bottom_color = tuple(max(0, c - 24) for c in base_color)
-            card = pygame.Surface(rect.size, pygame.SRCALPHA)
-            for y in range(rect.height):
-                blend = y / max(1, rect.height - 1)
-                color = tuple(
-                    int(top_color[i] * (1 - blend) + bottom_color[i] * blend)
-                    for i in range(3)
-                )
-                alpha = 240 if affordable else 190
-                pygame.draw.line(card, (*color, alpha), (0, y), (rect.width, y))
-            surface.blit(card, rect.topleft)
-
-            border_color = (180, 200, 255) if affordable else (110, 120, 150)
-            pygame.draw.rect(surface, border_color, rect, width=2, border_radius=12)
-
-            title_color = (250, 250, 255) if affordable else (190, 190, 210)
-            desc_color = (225, 230, 250) if affordable else (160, 165, 190)
-            stats_color = (210, 220, 240) if affordable else (150, 150, 180)
-
-            padding_x = 20
-            padding_y = 14
-
-            label = config.get("label", button.get("type", "Torre"))
-            title_rect = self._draw_text_with_shadow(
-                surface,
-                self.button_font,
-                label,
-                title_color,
-                (rect.left + padding_x, rect.top + padding_y),
-                anchor="topleft",
-            )
-
-            description = config.get("description")
-            if description:
-                self._draw_text_with_shadow(
-                    surface,
-                    self.description_font,
-                    description,
-                    desc_color,
-                    (rect.left + padding_x, title_rect.bottom + 4),
-                    anchor="topleft",
-                )
-
-            stats_lines = []
-            rango = config.get("range")
-            fire_rate = config.get("fire_rate")
-            damage = config.get("damage")
-            projectile_speed = config.get("projectile_speed")
-
-            first_line_parts = []
-            if rango is not None:
-                first_line_parts.append(f"Rango {rango}px")
-            if fire_rate is not None:
-                first_line_parts.append(f"Cadencia {fire_rate}/s")
-            if first_line_parts:
-                stats_lines.append(" · ".join(first_line_parts))
-
-            second_line_parts = []
-            if damage is not None:
-                second_line_parts.append(f"Daño {damage}")
-            if projectile_speed is not None:
-                second_line_parts.append(f"Vel proyectil {projectile_speed}px/s")
-            if second_line_parts:
-                stats_lines.append(" · ".join(second_line_parts))
-            stats_y = rect.bottom - 48
-            for line in stats_lines:
-                if not line:
-                    continue
-                self._draw_text_with_shadow(
-                    surface,
-                    self.small_font,
-                    line,
-                    stats_color,
-                    (rect.left + padding_x, stats_y),
-                    anchor="topleft",
-                )
-                stats_y += 18
-
-            badge_width = 140
-            badge_height = 40
-            badge_rect = pygame.Rect(0, 0, badge_width, badge_height)
-            badge_rect.bottomright = (rect.right - 18, rect.bottom - 14)
-            badge_panel = pygame.Surface(badge_rect.size, pygame.SRCALPHA)
-            badge_color = (255, 230, 130, 240) if affordable else (160, 140, 150, 220)
-            badge_panel.fill(badge_color)
-            surface.blit(badge_panel, badge_rect.topleft)
-
-            coin_center = (badge_rect.left + 18, badge_rect.centery)
-            pygame.draw.circle(surface, (245, 205, 80), coin_center, 10)
-            pygame.draw.circle(surface, (220, 180, 60), coin_center, 10, 2)
-            coin_text = self.small_font.render("$", True, (60, 40, 20))
-            coin_rect = coin_text.get_rect(center=coin_center)
-            surface.blit(coin_text, coin_rect)
-
-            cost_text = f"{cost}"
-            self._draw_text_with_shadow(
-                surface,
-                self.button_font,
-                cost_text,
-                (40, 40, 40) if affordable else (90, 60, 60),
-                (badge_rect.left + 36, badge_rect.centery),
-                anchor="midleft",
-            )
-
-            if not affordable and blocked_type == button.get("type"):
-                warning_text = "Dinero insuficiente"
-                self._draw_text_with_shadow(
-                    surface,
-                    self.small_font,
-                    warning_text,
-                    (255, 160, 160),
-                    (badge_rect.centerx, badge_rect.top - 6),
-                )
     # ------------------------------------------------------------------
     # Renderizado
     # ------------------------------------------------------------------
 
 
     def draw(self, surface):
-        surface.fill(settings.COLORS["bg"])
+        surface.fill(settings.get_color("bg"))
 
         if self.state == "menu":
             self._draw_menu(surface)
@@ -1160,3 +1044,24 @@ class GameManager:
 
         if self.state == "paused":
             info = "Puedes reanudar o gestionar el nivel desde el menú"
+
+        elif self.state == "game_over":
+            info = "Los enemigos alcanzaron la base. ¡Inténtalo de nuevo!"
+        elif self.state == "level_complete":
+            info = "Buen trabajo. Elige continuar o volver al menú principal"
+        elif self.state == "victory":
+            info = "Has completado todos los niveles disponibles"
+        else:
+            info = None
+
+        if info:
+            self._draw_text_with_shadow(
+                surface,
+                self.description_font,
+                info,
+                (235, 235, 245),
+                (settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2 - 60),
+            )
+
+        for button in self.overlay_buttons:
+            self._draw_button(surface, button)

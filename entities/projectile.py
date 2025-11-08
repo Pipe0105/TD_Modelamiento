@@ -41,7 +41,7 @@ class Projectile:
     def draw(self, surface):
         pygame.draw.circle(
             surface,
-            settings.COLORS["projectile"],
+            settings.get_color("projectile"),
             (int(self.pos[0]), int(self.pos[1])),
             7,
         )

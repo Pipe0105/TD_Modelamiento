@@ -71,4 +71,5 @@ class BuildSpot:
             surface.blit(image, rect)
             return
 
-        pygame.draw.rect(surface, settings.COLORS["spot"], self.rect, border_radius=8)
+        pygame.draw.rect(surface, settings.get_color("spot"), self.rect, border_radius=8)
+

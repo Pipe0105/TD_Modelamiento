@@ -40,37 +40,37 @@ TOWER_TYPES = {
         "label": "Torre Guardián",
         "description": "Equilibrada en alcance, daño y cadencia.",
         "cost": 55,
-        "range": 420,
-        "fire_rate": 10,
-        "damage": 55,
+        "range": 360,
+        "fire_rate": 8,
+        "damage": 40,
         "projectile_speed": 8,
     },
     "centinela": {
         "label": "Torre Centinela",
         "description": "Gran alcance y daño, pero dispara más lento.",
         "cost": 75,
-        "range": 780,
-        "fire_rate": 5,
-        "damage": 85,
+        "range": 650,
+        "fire_rate": 4,
+        "damage": 65,
         "projectile_speed": 9,
     },
     "rafaga": {
         "label": "Torre Ráfaga",
         "description": "Cadencia altísima para frenar grandes grupos.",
         "cost": 65,
-        "range": 360,
-        "fire_rate": 16,
-        "damage": 40,
+        "range": 320,
+        "fire_rate": 12,
+        "damage": 30,
         "projectile_speed": 11,
     },
 }
 
 # Torres
 
-TOWER_RANGE = 220       # antes 150
-TOWER_FIRE_RATE = 1.5   # antes 1.0
+TOWER_RANGE = 180       # antes 150
+TOWER_FIRE_RATE = 1.2   # antes 1.0
 PROJECTILE_SPEED = 6
-PROJECTILE_DAMAGE = 50
+PROJECTILE_DAMAGE = 35
 
 # Mejoras de torres (etiqueta, costo, incremento, nivel máximo opcional)
 TOWER_UPGRADES = {
@@ -97,9 +97,7 @@ TOWER_UPGRADES = {
     },
 }
 
-# colores (tema)
-
-COLORS = {
+DEFAULT_COLORS = {
     "bg": (30, 30, 40),
     "path": (120, 120, 120),
     "enemy": (200, 60, 60),
@@ -108,3 +106,26 @@ COLORS = {
     "projectile": (255, 220, 50),
     "spot": (60, 120, 200),
 }
+
+# Permite redefinir COLORS desde otros módulos (por ejemplo, para aplicar un
+# tema distinto) sin perder valores esenciales. Si COLORS aún no existe,
+# copiamos la paleta por defecto; en caso contrario, rellenamos claves
+# faltantes.
+COLORS = {**DEFAULT_COLORS, **globals().get("COLORS", {})}
+
+
+def get_color(name: str, default: tuple[int, int, int] | None = None) -> tuple[int, int, int]:
+    """Obtiene un color de la paleta.
+
+    Si la paleta se redefine en tiempo de ejecución y falta la clave pedida,
+    devolvemos un valor razonable para evitar errores en tiempo de ejecución.
+    """
+
+    palette = globals().get("COLORS")
+    if isinstance(palette, dict):
+        if default is None:
+            return palette.get(name, DEFAULT_COLORS.get(name, (0, 0, 0)))
+        return palette.get(name, default)
+    if default is not None:
+        return default
+    return DEFAULT_COLORS.get(name, (0, 0, 0))

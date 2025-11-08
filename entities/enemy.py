@@ -38,8 +38,9 @@ class Enemy:
         self.reward = reward if reward is not None else settings.ENEMY_REWARD
 
         self.base_radius = max(1, int(radius)) if radius is not None else 10
-        self.base_color = color if color is not None else settings.COLORS.get("enemy", (200, 60, 60))
-
+        self.base_color = (
+            color if color is not None else settings.get_color("enemy", (200, 60, 60))
+        )
 
         # Configuración visual / animación
         self.sprite_set = str(sprite_set) if sprite_set else "1"
@@ -111,7 +112,7 @@ class Enemy:
         radius: int | None = None, color: tuple[int, int, int] | None = None
     ) -> pygame.Surface:
         radius = max(1, radius) if radius is not None else settings.TILE_SIZE // 2
-        color = color if color is not None else settings.COLORS.get("enemy", (200, 60, 60))
+        color = color if color is not None else settings.get_color("enemy", (200, 60, 60))
         diameter = radius * 2
         surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
         pygame.draw.circle(surface, color, (radius, radius), radius)

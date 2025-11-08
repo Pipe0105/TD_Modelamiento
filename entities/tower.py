@@ -158,7 +158,8 @@ class Tower:
             rect = self.image.get_rect(center=self.pos)
             surface.blit(self.image, rect)
         else:
-            pygame.draw.circle(surface, settings.COLORS["tower"], self.pos, 20)
+            pygame.draw.circle(surface, settings.get_color("tower"), self.pos, 20)
+
 
         # Dibujar rango de ataque (transparente)
         pygame.draw.circle(surface, (80, 80, 150, 60), self.pos, self.range, 1)
