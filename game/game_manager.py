@@ -78,23 +78,79 @@ class GameManager:
     # Configuración de niveles
     # ------------------------------------------------------------------
     def _build_menu_buttons(self) -> List[dict]:
-        buttons = []
+        if not self.levels:
+            return []
+
+        button_width = 520
+        horizontal_padding = 24
+        vertical_spacing = 28
+        min_height = 96
         center_x = settings.SCREEN_WIDTH // 2
-        base_y = settings.SCREEN_HEIGHT // 2 - (len(self.levels) * 96) // 2
+
+        layout_data: list[dict] = []
+        total_height = 0
+
+        inner_width = button_width - horizontal_padding * 2
         for idx, level in enumerate(self.levels):
             config = level["config"]
-            center = (center_x, base_y + idx * 110)
             subtitle = self._format_level_summary(config)
-            buttons.append(
-                self._make_button(
-                    config["nombre"],
-                    center,
-                    lambda index=idx: self.load_level(index),
-                    level_index=idx,
-                    subtitle=subtitle,
-                    size=(420, 86),
+            subtitle_lines = self._wrap_text(
+                self.description_font, subtitle, inner_width
+            ) if subtitle else []
+
+            title_height = self.button_font.get_linesize()
+            subtitle_height = 0
+            if subtitle_lines:
+                line_height = self.description_font.get_linesize()
+                subtitle_height = len(subtitle_lines) * line_height + (
+                    max(0, len(subtitle_lines) - 1) * 6
                 )
+
+            padding_top = 24
+            padding_bottom = 24
+            gap = 12 if subtitle_lines else 0
+
+            height = padding_top + title_height + gap + subtitle_height + padding_bottom
+            height = max(min_height, height)
+
+            layout_data.append(
+                {
+                    "config": config,
+                    "index": idx,
+                    "subtitle": subtitle,
+                    "subtitle_lines": subtitle_lines,
+                    "height": int(height),
+                }
             )
+
+        if not layout_data:
+            return []
+
+        total_height = sum(item["height"] for item in layout_data)
+        total_height += vertical_spacing * (len(layout_data) - 1)
+
+        start_y = (settings.SCREEN_HEIGHT - total_height) / 2
+        header_bottom = 220
+        min_start = header_bottom + 30
+        start_y = max(start_y, min_start)
+
+        buttons: list[dict] = []
+        current_top = start_y
+        for item in layout_data:
+            height = item["height"]
+            center = (center_x, int(current_top + height / 2))
+            button = self._make_button(
+                item["config"]["nombre"],
+                center,
+                lambda index=item["index"]: self.load_level(index),
+                level_index=item["index"],
+                subtitle=item["subtitle"],
+                subtitle_lines=item["subtitle_lines"],
+                size=(button_width, height),
+            )
+            buttons.append(button)
+            current_top += height + vertical_spacing
+
         return buttons
 
 
@@ -106,16 +162,20 @@ class GameManager:
         level_index=None,
         size=(320, 60),
         subtitle: str | None = None,
+        subtitle_lines: list[str] | None = None,
+
     ) -> dict:
         rect = pygame.Rect(0, 0, *size)
         rect.center = center
-        return {
+        button_data = {
             "rect": rect,
             "text": text,
             "action": action,
             "level_index": level_index,
             "subtitle": subtitle,
+            "subtitle_lines": subtitle_lines,
         }
+        return button_data
 
     def load_level(self, index: int):
         """Carga un mapa y reinicia todos los parámetros asociados."""
@@ -884,6 +944,8 @@ class GameManager:
 
         text = button.get("text", "")
         subtitle = button.get("subtitle")
+        subtitle_lines = button.get("subtitle_lines")
+
         level_index = button.get("level_index")
 
         base_color = (68, 74, 102)
@@ -929,16 +991,24 @@ class GameManager:
         else:
             title_rect = pygame.Rect(rect.left + padding_x, rect.top + padding_y, 0, 0)
 
-        if subtitle:
+        if subtitle_lines is None and subtitle:
+            max_width = rect.width - padding_x * 2
+            subtitle_lines = self._wrap_text(self.description_font, subtitle, max_width)
+
+        if subtitle_lines:
             subtitle_color = (220, 225, 240)
-            self._draw_text_with_shadow(
-                surface,
-                self.description_font,
-                subtitle,
-                subtitle_color,
-                (rect.left + padding_x, title_rect.bottom + 6),
-                anchor="topleft",
-            )
+            current_y = title_rect.bottom + 8
+            line_spacing = 6
+            for line in subtitle_lines:
+                line_rect = self._draw_text_with_shadow(
+                    surface,
+                    self.description_font,
+                    line,
+                    subtitle_color,
+                    (rect.left + padding_x, current_y),
+                    anchor="topleft",
+                )
+                current_y = line_rect.bottom + line_spacing
 
         if level_index is not None:
             badge_text = f"Nivel {level_index + 1}"
@@ -958,6 +1028,132 @@ class GameManager:
                     badge_rect.top + 4,
                 ),
             )
+
+    def _draw_build_menu(self, surface):
+        if not self.build_menu:
+            return
+
+        panel_rect: pygame.Rect | None = self.build_menu.get("panel_rect")
+        buttons: list[dict] = self.build_menu.get("buttons", [])
+        blocked: str | None = self.build_menu.get("blocked")
+
+        if panel_rect:
+            panel_surface = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
+            panel_surface.fill((18, 22, 36, 235))
+            surface.blit(panel_surface, panel_rect.topleft)
+            pygame.draw.rect(surface, (90, 100, 150), panel_rect, width=2, border_radius=18)
+
+            header_pos = (panel_rect.centerx, panel_rect.top + 28)
+            self._draw_text_with_shadow(
+                surface,
+                self.button_font,
+                "Selecciona una torre",
+                (235, 240, 255),
+                header_pos,
+                anchor="midtop",
+            )
+
+        padding_x = 22
+        padding_y = 18
+
+        for button in buttons:
+            rect: pygame.Rect | None = button.get("rect")
+            if rect is None:
+                continue
+
+            type_key: str = button.get("type", "")
+            config: dict = button.get("config", {})
+            cost = config.get("cost", settings.TOWER_COST)
+            label = config.get("label", type_key.capitalize())
+            description = config.get("description", "")
+
+            affordable = self.money >= cost
+            is_blocked = blocked == type_key
+
+            if is_blocked:
+                base_color = (90, 48, 48)
+                border_color = (200, 110, 110)
+            elif affordable:
+                base_color = (70, 78, 118)
+                border_color = (150, 170, 225)
+            else:
+                base_color = (44, 48, 70)
+                border_color = (110, 120, 150)
+
+            panel = pygame.Surface(rect.size, pygame.SRCALPHA)
+            top_color = tuple(min(255, c + 22) for c in base_color)
+            bottom_color = tuple(max(0, c - 18) for c in base_color)
+            for y in range(rect.height):
+                blend = y / max(1, rect.height - 1)
+                color = tuple(
+                    int(top_color[i] * (1 - blend) + bottom_color[i] * blend)
+                    for i in range(3)
+                )
+                alpha = 235 if affordable and not is_blocked else 210
+                pygame.draw.line(panel, (*color, alpha), (0, y), (rect.width, y))
+            surface.blit(panel, rect.topleft)
+            pygame.draw.rect(surface, border_color, rect, width=2, border_radius=14)
+
+            title_rect = self._draw_text_with_shadow(
+                surface,
+                self.button_font,
+                label,
+                (250, 250, 255),
+                (rect.left + padding_x, rect.top + padding_y),
+                anchor="topleft",
+            )
+
+            cost_color = (255, 230, 140) if affordable else (210, 150, 150)
+            self._draw_text_with_shadow(
+                surface,
+                self.font,
+                f"$ {cost}",
+                cost_color,
+                (rect.right - padding_x, rect.top + padding_y + 2),
+                anchor="topright",
+            )
+
+            if description:
+                desc_color = (220, 225, 240)
+                self._draw_text_with_shadow(
+                    surface,
+                    self.small_font,
+                    description,
+                    desc_color,
+                    (rect.left + padding_x, title_rect.bottom + 8),
+                    anchor="topleft",
+                )
+
+            stats = []
+            if "damage" in config:
+                stats.append(f"Daño: {config['damage']}")
+            if "fire_rate" in config:
+                stats.append(f"Cadencia: {config['fire_rate']}")
+            if "range" in config:
+                stats.append(f"Rango: {config['range']}")
+
+            if stats:
+                stats_text = " | ".join(stats)
+                stats_pos_y = rect.bottom - padding_y - self.small_font.get_height()
+                self._draw_text_with_shadow(
+                    surface,
+                    self.small_font,
+                    stats_text,
+                    (205, 210, 225),
+                    (rect.left + padding_x, stats_pos_y),
+                    anchor="topleft",
+                )
+
+            if is_blocked:
+                warning_text = "Fondos insuficientes"
+                self._draw_text_with_shadow(
+                    surface,
+                    self.small_font,
+                    warning_text,
+                    (255, 180, 180),
+                    (rect.right - padding_x, rect.bottom - padding_y),
+                    anchor="topright",
+                )
 
     def _draw_text_with_shadow(
         self,
@@ -990,6 +1186,40 @@ class GameManager:
         surface.blit(shadow_surface, shadow_rect)
         surface.blit(text_surface, text_rect)
         return text_rect
+    
+    def _wrap_text(
+        self,
+        font: pygame.font.Font,
+        text: str,
+        max_width: int,
+    ) -> list[str]:
+        """Divide un texto en múltiples líneas que encajen en el ancho indicado."""
+
+        if not text:
+            return []
+
+        if max_width <= 0:
+            return [text]
+
+        wrapped_lines: list[str] = []
+        for raw_line in text.splitlines():
+            words = raw_line.split()
+            if not words:
+                wrapped_lines.append("")
+                continue
+
+            current_line = words[0]
+            for word in words[1:]:
+                candidate = f"{current_line} {word}" if current_line else word
+                if font.size(candidate)[0] <= max_width:
+                    current_line = candidate
+                else:
+                    wrapped_lines.append(current_line)
+                    current_line = word
+            if current_line:
+                wrapped_lines.append(current_line)
+
+        return wrapped_lines
 
     def _draw_menu(self, surface):
         header_rect = pygame.Rect(0, 0, settings.SCREEN_WIDTH, 220)
